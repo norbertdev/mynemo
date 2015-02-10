@@ -18,7 +18,7 @@
  */
 package norbert.mynemo.core.evaluation;
 
-import org.apache.commons.math.stat.descriptive.SummaryStatistics;
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 
 /**
  * This class represents a report produced by an evaluator. It contains the key
