@@ -1,2 +1,2 @@
-# mynemo
-Mynemo suggest your next movie to see
+# Mynemo
+Mynemo suggests your next movie to see.
