@@ -72,7 +72,13 @@ public class TenMillionRatingFile implements ImportableRatingFile {
 
     @Override
     public boolean hasNext() {
-      return delegate.hasNext();
+      boolean result = delegate.hasNext();
+
+      if (!result) {
+        close();
+      }
+
+      return result;
     }
 
     @Override
