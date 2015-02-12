@@ -121,19 +121,31 @@ public class TenMillionRatingFile implements ImportableRatingFile {
     }
   }
 
-  private static final String KNOWN_FIRST_LINE = "1::122::5::838985046";
+  private static final String KNOWN_LINE1_OF_10M_FILE = "1::122::5::838985046";
+  private static final String KNOWN_LINE1_OF_MAPPING_FILE = "<text>";
+  private static final String KNOWN_LINE2_OF_MAPPING_FILE = "MovieId Rating  Average ImdbId  Title";
   private static final int MOVIE_INDEX = 1;
   private static final String MOVIELENS_VALUE_SEPARATOR = "::";
   private static final Pattern PATTERN = Pattern.compile(MOVIELENS_VALUE_SEPARATOR);
+
   private static final int USER_INDEX = 0;
+
   private static final int VALUE_INDEX = 2;
 
   /**
-   * Returns <code>true</code> if the given file can be parsed, <code>false</code> otherwise.
+   * Returns <code>true</code> if the given file can be parsed and the other given file contains
+   * mappings between movie ids. Returns <code>false</code> otherwise.
+   *
+   * @param filepath file containing the 10 million ratings
+   * @param mappingFilepath file containing the mappings between movie ids
+   * @return true if the ratings can be imported, false otherwise
    */
-  public static boolean canImport(String filepath) {
-    try (BufferedReader reader = new BufferedReader(new FileReader(filepath))) {
-      return KNOWN_FIRST_LINE.equals(reader.readLine());
+  public static boolean canImport(String filepath, String mappingFilepath) {
+    try (BufferedReader tenmReader = new BufferedReader(new FileReader(filepath));
+        BufferedReader mappingReader = new BufferedReader(new FileReader(mappingFilepath))) {
+      return KNOWN_LINE1_OF_10M_FILE.equals(tenmReader.readLine())
+          && KNOWN_LINE1_OF_MAPPING_FILE.equals(mappingReader.readLine())
+          && KNOWN_LINE2_OF_MAPPING_FILE.equals(mappingReader.readLine());
     } catch (Exception e) {
       return false;
     }

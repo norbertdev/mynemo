@@ -31,6 +31,7 @@ import norbert.mynemo.core.selection.BestRecommenderSelector;
 import norbert.mynemo.core.selection.BestRecommenderSelector.SpeedOption;
 import norbert.mynemo.core.selection.EvaluationComparator;
 import norbert.mynemo.core.selection.RecommenderEvaluation;
+import norbert.mynemo.dataimport.StringUserDataModel;
 
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
@@ -41,7 +42,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.mahout.cf.taste.common.NoSuchUserException;
 import org.apache.mahout.cf.taste.common.TasteException;
-import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
 import org.apache.mahout.cf.taste.model.DataModel;
 
 import com.google.common.base.Optional;
@@ -284,7 +284,7 @@ public class SelectCommandParser {
     DataModel result;
 
     try {
-      result = new FileDataModel(new File(dataModelValue));
+      result = new StringUserDataModel(new File(dataModelValue));
     } catch (IOException e) {
       throw new IllegalStateException("Error: unable to load the data model.", e);
     }
@@ -332,7 +332,7 @@ public class SelectCommandParser {
     long result;
 
     try {
-      result = Long.parseLong(user);
+      result = StringUserDataModel.userNameToLong(user);
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Error: the provided user is not a valid id.", e);
     }

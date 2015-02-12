@@ -102,6 +102,10 @@ public class CkMapping {
     return ckMovie;
   }
 
+  public String getImdbMovie() {
+    return imdbMovie;
+  }
+
   /**
    * Prints the internal data to the given printer. The printer is usually created by calling the
    * {@link #createPrinter(String)} method.

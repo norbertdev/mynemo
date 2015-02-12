@@ -29,6 +29,7 @@ import norbert.mynemo.core.recommendation.recommender.BasicRecommender;
 import norbert.mynemo.core.recommendation.recommender.ItemSimilarityRecommender;
 import norbert.mynemo.core.recommendation.recommender.SvdBasedRecommender;
 import norbert.mynemo.core.recommendation.recommender.UserSimilarityRecommender;
+import norbert.mynemo.dataimport.StringUserDataModel;
 
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
@@ -40,7 +41,6 @@ import org.apache.commons.cli.ParseException;
 import org.apache.mahout.cf.taste.common.NoSuchUserException;
 import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.eval.RecommenderBuilder;
-import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
 import org.apache.mahout.cf.taste.model.DataModel;
 import org.apache.mahout.cf.taste.recommender.RecommendedItem;
 
@@ -303,7 +303,7 @@ public class RecommendCommandParser {
     DataModel result;
 
     try {
-      result = new FileDataModel(new File(dataModel));
+      result = new StringUserDataModel(new File(dataModel));
     } catch (IOException e) {
       throw new IllegalStateException("Error: unable to load the data model.", e);
     }
@@ -422,7 +422,7 @@ public class RecommendCommandParser {
     long result;
 
     try {
-      result = Long.parseLong(user);
+      result = StringUserDataModel.userNameToLong(user);
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Error: the provided user is not a valid id.", e);
     }

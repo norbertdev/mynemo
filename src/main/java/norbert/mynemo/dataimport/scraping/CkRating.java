@@ -110,6 +110,10 @@ public class CkRating {
     return user;
   }
 
+  public String getValue() {
+    return value;
+  }
+
   /**
    * Prints the internal data to the given printer. The printer is usually created by calling the
    * {@link #createPrinter(String)} method.
