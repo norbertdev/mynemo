@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import norbert.mynemo.dataimport.FileImporter;
+import norbert.mynemo.dataimport.fileformat.output.UserSimilarityType;
 
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
@@ -40,13 +41,15 @@ import com.google.common.base.Optional;
  */
 public class ImportCommandParser {
   private static final String COMMAND_SYNTAX = "import  --out <file>  --in <file> [<file>…]"
-      + "  [--movies <file> [<file>]]  [--user <id>]  [--max-users <number>]"
+      + "  [--movies <file> [<file>]]  [--user <id>]  [--max-users <number> [--similarity <type>]]"
       + "  [--min-ratings-by-movie <number>]";
 
   // maximum number of users
   private static final String MAX_USERS_ARG_NAME = "number";
   private static final String MAX_USERS_DESCRIPTION = "maximum number of users allowed in the"
-      + " output file. Once the limit is reach, the ratings of other users are ignored.";
+      + " output file. Once the limit is reached, the ratings of other users are ignored. This"
+      + " option can be further refined with the 'similarity' and the 'user' options, to retain"
+      + " the nearest neighbors of the specified user.";
   private static final String MAX_USERS_LONG_OPTION = "max-users";
 
   // minimum number of ratings for a movie
@@ -79,17 +82,27 @@ public class ImportCommandParser {
   private static final String RATINGS_DESCRIPTION = "file containing ratings from MovieLens.";
   private static final String RATINGS_LONG_OPTION = "in";
 
+  // similarity type
+  private static final String SIMILARITY_ARG_NAME = "type";
+  private static final char SIMILARITY_CHAR_OPTION = 's';
+  private static final String SIMILARITY_DESCRIPTION = "type of similarity used to find the"
+      + " nearest users of the target user. This option works with the '" + MAX_USERS_LONG_OPTION
+      + "' and the 'user' options: only the nearest users will be retained.";
+  private static final String SIMILARITY_LONG_OPTION = "similarity";
+
   // user
   private static final String USER_ARG_NAME = "id";
   private static final char USER_CHAR_OPTION = 'u';
-  private static final String USER_DESCRIPTION = "user identifier of the input ratings.";
+  private static final String USER_DESCRIPTION = "user identifier of the input ratings, and target"
+      + " user of the similarity.";
   private static final String USER_LONG_OPTION = "user";
 
   /**
    * Performs various checks on the parameters.
    */
   private static void check(String ouputFilepath, String[] ratingFilepaths,
-      String[] mappingFilepaths) throws FileNotFoundException {
+      String[] mappingFilepaths, Optional<Integer> maxUsers, Optional<String> user,
+      Optional<UserSimilarityType> similarityType) throws FileNotFoundException {
 
     // output filepath
     if (new File(ouputFilepath).exists()) {
@@ -108,6 +121,12 @@ public class ImportCommandParser {
       if (!new File(filepath).exists()) {
         throw new FileNotFoundException("Error: cannot find the movie file " + filepath);
       }
+    }
+
+    // similarity type
+    if (similarityType.isPresent() && (!user.isPresent() || !maxUsers.isPresent())) {
+      throw new IllegalArgumentException("Error: if a similarity type is given, then the user and"
+          + " the maximum number of users must be given.");
     }
   }
 
@@ -150,8 +169,14 @@ public class ImportCommandParser {
     OptionBuilder.withDescription(MIN_RATINGS_BY_MOVIE_DESCRIPTION);
     Option minRatingsByMovie = OptionBuilder.create();
 
+    OptionBuilder.hasArg();
+    OptionBuilder.withArgName(SIMILARITY_ARG_NAME);
+    OptionBuilder.withLongOpt(SIMILARITY_LONG_OPTION);
+    OptionBuilder.withDescription(SIMILARITY_DESCRIPTION);
+    Option similarity = OptionBuilder.create(SIMILARITY_CHAR_OPTION);
+
     return new Options().addOption(out).addOption(ratings).addOption(movies).addOption(user)
-        .addOption(maxUsers).addOption(minRatingsByMovie);
+        .addOption(maxUsers).addOption(minRatingsByMovie).addOption(similarity);
   }
 
   public static void main(String[] args) {
@@ -186,11 +211,13 @@ public class ImportCommandParser {
     Optional<Integer> maxUsers = parseMaxUser(commandLine.getOptionValue(MAX_USERS_LONG_OPTION));
     Optional<Integer> minRatingsByMovie =
         parseMinRatingsByMovie(commandLine.getOptionValue(MIN_RATINGS_BY_MOVIE_LONG_OPTION));
+    Optional<UserSimilarityType> similarityType =
+        parseSimilarityType(commandLine.getOptionValue(SIMILARITY_LONG_OPTION));
 
-    check(outputFilepath, ratingsFilepaths, moviesFilepath);
+    check(outputFilepath, ratingsFilepaths, moviesFilepath, maxUsers, user, similarityType);
 
     FileImporter.convert(outputFilepath, Arrays.asList(ratingsFilepaths),
-        Arrays.asList(moviesFilepath), user, maxUsers, minRatingsByMovie);
+        Arrays.asList(moviesFilepath), user, maxUsers, minRatingsByMovie, similarityType);
   }
 
   /**
@@ -245,9 +272,32 @@ public class ImportCommandParser {
     return Optional.of(result);
   }
 
+  private static Optional<UserSimilarityType> parseSimilarityType(String optionValue) {
+    if (optionValue == null) {
+      return Optional.absent();
+    }
+
+    UserSimilarityType result;
+
+    try {
+      result = UserSimilarityType.valueOf(optionValue.toUpperCase());
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Error: unable to find the given similarity ("
+          + optionValue + ")");
+    }
+
+    return Optional.of(result);
+  }
+
   public static void printUsage() {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp(COMMAND_SYNTAX, getOptions());
+
+    System.out.print("Available user similarities: ");
+    for (UserSimilarityType current : UserSimilarityType.values()) {
+      System.out.print(current.name().toLowerCase() + "  ");
+    }
+    System.out.println();
   }
 
   /**

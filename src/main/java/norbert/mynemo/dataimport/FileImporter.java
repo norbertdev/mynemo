@@ -29,10 +29,12 @@ import norbert.mynemo.dataimport.fileformat.input.ImportableRatingFile;
 import norbert.mynemo.dataimport.fileformat.input.MovieLensRatingFile;
 import norbert.mynemo.dataimport.fileformat.input.MynemoRatingFile;
 import norbert.mynemo.dataimport.fileformat.input.TenMillionRatingFile;
+import norbert.mynemo.dataimport.fileformat.output.MaxNeighborUserFilter;
 import norbert.mynemo.dataimport.fileformat.output.MaxUserFilter;
 import norbert.mynemo.dataimport.fileformat.output.MinRatingByMovieFilter;
 import norbert.mynemo.dataimport.fileformat.output.RatingFileWriter;
 import norbert.mynemo.dataimport.fileformat.output.RatingWriter;
+import norbert.mynemo.dataimport.fileformat.output.UserSimilarityType;
 
 import com.google.common.base.Optional;
 
@@ -73,11 +75,12 @@ public class FileImporter {
    *        this number of users
    * @param minRatingsByMovie minimum ratings by movie, the output file won't contain movies that
    *        have less than this number of ratings
-   * @throws IOException
+   * @param similarityType type of similarity used to find the nearest users of the target user
    */
   public static void convert(String outputFilepath, Collection<String> inputFilepaths,
       Collection<String> movieFilepath, Optional<String> user, Optional<Integer> maxUsers,
-      Optional<Integer> minRatingsByMovie) throws IOException {
+      Optional<Integer> minRatingsByMovie, Optional<UserSimilarityType> similarityType)
+          throws IOException {
     checkNotNull(outputFilepath);
     checkNotNull(inputFilepaths);
     checkArgument(!inputFilepaths.isEmpty(), "At least one input file must be given.");
@@ -90,7 +93,8 @@ public class FileImporter {
     }
 
     RatingWriter writer =
-        createFilters(new RatingFileWriter(outputFilepath), maxUsers, minRatingsByMovie);
+        createFilters(new RatingFileWriter(outputFilepath), maxUsers, minRatingsByMovie,
+            similarityType, user);
 
     for (String ratingFilepath : inputFilepaths) {
       ImportableRatingFile importableFile = getFile(ratingFilepath, movieFilepath, user);
@@ -106,7 +110,8 @@ public class FileImporter {
    * Interposes the necessary filters before the last writer, according to the given parameters.
    */
   private static RatingWriter createFilters(RatingWriter lastWriter, Optional<Integer> maxUsers,
-      Optional<Integer> minRatingsByMovie) {
+      Optional<Integer> minRatingsByMovie, Optional<UserSimilarityType> similarityType,
+      Optional<String> targetUser) {
 
     RatingWriter nextWriter = lastWriter;
 
@@ -114,7 +119,13 @@ public class FileImporter {
       nextWriter = new MinRatingByMovieFilter(nextWriter, minRatingsByMovie.get());
     }
     if (maxUsers.isPresent()) {
-      nextWriter = new MaxUserFilter(nextWriter, maxUsers.get());
+      if (similarityType.isPresent()) {
+        nextWriter =
+            new MaxNeighborUserFilter(nextWriter, targetUser.get(), maxUsers.get(),
+                similarityType.get());
+      } else {
+        nextWriter = new MaxUserFilter(nextWriter, maxUsers.get());
+      }
     }
 
     return nextWriter;
