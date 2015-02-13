@@ -111,7 +111,7 @@ public class UserSimilarityRecommender implements RecommenderBuilder {
         break;
 
       case USER_SIMILARITY_WITH_UNCENTERED_COSINE:
-        selectedSimilarity = new UncenteredCosineSimilarity(dataModel);
+        selectedSimilarity = new UncenteredCosineSimilarity(dataModel, Weighting.UNWEIGHTED);
         break;
 
       case USER_SIMILARITY_WITH_WEIGHTED_EUCLIDEAN_DISTANCE:
@@ -120,6 +120,10 @@ public class UserSimilarityRecommender implements RecommenderBuilder {
 
       case USER_SIMILARITY_WITH_WEIGHTED_PEARSON_CORRELATION:
         selectedSimilarity = new PearsonCorrelationSimilarity(dataModel, Weighting.WEIGHTED);
+        break;
+
+      case USER_SIMILARITY_WITH_WEIGHTED_UNCENTERED_COSINE:
+        selectedSimilarity = new UncenteredCosineSimilarity(dataModel, Weighting.WEIGHTED);
         break;
 
       default:

@@ -73,13 +73,16 @@ public class ItemSimilarityRecommender implements RecommenderBuilder {
         similarity = new TanimotoCoefficientSimilarity(dataModel);
         break;
       case ITEM_SIMILARITY_WITH_UNCENTERED_COSINE:
-        similarity = new UncenteredCosineSimilarity(dataModel);
+        similarity = new UncenteredCosineSimilarity(dataModel, Weighting.UNWEIGHTED);
         break;
       case ITEM_SIMILARITY_WITH_WEIGHTED_EUCLIDEAN_DISTANCE:
         similarity = new EuclideanDistanceSimilarity(dataModel, Weighting.WEIGHTED);
         break;
       case ITEM_SIMILARITY_WITH_WEIGHTED_PEARSON_CORRELATION:
         similarity = new PearsonCorrelationSimilarity(dataModel, Weighting.WEIGHTED);
+        break;
+      case ITEM_SIMILARITY_WITH_WEIGHTED_UNCENTERED_COSINE:
+        similarity = new UncenteredCosineSimilarity(dataModel, Weighting.WEIGHTED);
         break;
       default:
         throw new IllegalStateException();
