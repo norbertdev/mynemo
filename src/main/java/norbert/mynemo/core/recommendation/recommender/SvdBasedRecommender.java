@@ -17,6 +17,9 @@
 package norbert.mynemo.core.recommendation.recommender;
 
 import static com.google.common.base.Preconditions.checkArgument;
+
+import java.io.IOException;
+
 import norbert.mynemo.core.recommendation.configuration.SvdBasedRecommenderConfiguration;
 
 import org.apache.mahout.cf.taste.common.TasteException;
@@ -24,6 +27,7 @@ import org.apache.mahout.cf.taste.eval.RecommenderBuilder;
 import org.apache.mahout.cf.taste.impl.recommender.svd.ALSWRFactorizer;
 import org.apache.mahout.cf.taste.impl.recommender.svd.Factorizer;
 import org.apache.mahout.cf.taste.impl.recommender.svd.ParallelSGDFactorizer;
+import org.apache.mahout.cf.taste.impl.recommender.svd.PersistenceStrategy;
 import org.apache.mahout.cf.taste.impl.recommender.svd.RatingSGDFactorizer;
 import org.apache.mahout.cf.taste.impl.recommender.svd.SVDPlusPlusFactorizer;
 import org.apache.mahout.cf.taste.impl.recommender.svd.SVDRecommender;
@@ -38,7 +42,9 @@ public class SvdBasedRecommender implements RecommenderBuilder {
 
   private static final int DEFAULT_EPOCHS = 1;
   private static final double DEFAULT_LAMBDA = 0.065;
+  private Factorizer cachedFactorizer;
   private final SvdBasedRecommenderConfiguration configuration;
+  private PersistenceStrategy persistenceStrategy;
 
   public SvdBasedRecommender(SvdBasedRecommenderConfiguration configuration) {
     checkArgument(configuration != null, "The configuration must not be null.");
@@ -47,34 +53,54 @@ public class SvdBasedRecommender implements RecommenderBuilder {
 
   @Override
   public Recommender buildRecommender(DataModel dataModel) throws TasteException {
-    Factorizer factorizer = null;
+    if (!configuration.allowCachedFactorizationReuse()) {
 
+      // create a new factorizer each time
+      return new SVDRecommender(dataModel, createFactorizer(dataModel));
+
+    }
+
+    if (cachedFactorizer == null) {
+      // lazy initialization
+      cachedFactorizer = createFactorizer(configuration.getDataModel());
+      try {
+        persistenceStrategy = new RamPersistenceStrategy();
+        persistenceStrategy.maybePersist(cachedFactorizer.factorize());
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    return new SVDRecommender(dataModel, cachedFactorizer, persistenceStrategy);
+  }
+
+  private Factorizer createFactorizer(DataModel dataModel) throws TasteException {
     int featuresNumber = configuration.getFeatureNumber();
     int iterationsNumber = configuration.getIterationNumber();
+    Factorizer result;
 
     switch (configuration.getType()) {
       case SVD_WITH_ALSWR_FACTORIZER:
-        factorizer =
-            new ALSWRFactorizer(dataModel, featuresNumber, DEFAULT_LAMBDA, iterationsNumber);
+        result = new ALSWRFactorizer(dataModel, featuresNumber, DEFAULT_LAMBDA, iterationsNumber);
         break;
 
       case SVD_WITH_PARALLEL_SGD_FACTORIZER:
-        factorizer =
+        result =
             new ParallelSGDFactorizer(dataModel, featuresNumber, DEFAULT_LAMBDA, DEFAULT_EPOCHS);
         break;
 
       case SVD_WITH_RATING_SGD_FACTORIZER:
-        factorizer = new RatingSGDFactorizer(dataModel, featuresNumber, iterationsNumber);
+        result = new RatingSGDFactorizer(dataModel, featuresNumber, iterationsNumber);
         break;
 
       case SVD_WITH_SVDPLUSPLUS_FACTORIZER:
-        factorizer = new SVDPlusPlusFactorizer(dataModel, featuresNumber, iterationsNumber);
+        result = new SVDPlusPlusFactorizer(dataModel, featuresNumber, iterationsNumber);
         break;
 
       default:
         throw new UnsupportedOperationException();
     }
 
-    return new SVDRecommender(dataModel, factorizer);
+    return result;
   }
 }

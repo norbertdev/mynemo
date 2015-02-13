@@ -155,7 +155,7 @@ public class RecommendCommandParser {
       case SVD_BASED:
         builder =
             new SvdBasedRecommender(new SvdBasedRecommenderConfiguration(algorithm, features.get(),
-                iterations.get()));
+                iterations.get(), dataModel, false));
         break;
 
       case USER_SIMILARITY_BASED:

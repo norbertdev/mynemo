@@ -209,12 +209,14 @@ public class BestRecommenderSelector {
 
     List<RecommenderEvaluation> result = new ArrayList<>();
     int numberOfIterations = 4;
+    boolean allowReuse = DEFAULT_REUSE_STATE && (evaluationPercentage == 1);
 
     // try several configurations
     for (int numberOfFeatures : newArrayList(1, 3, 5, 10)) {
 
       SvdBasedRecommenderConfiguration configuration =
-          new SvdBasedRecommenderConfiguration(type, numberOfFeatures, numberOfIterations);
+          new SvdBasedRecommenderConfiguration(type, numberOfFeatures, numberOfIterations,
+              dataModel, allowReuse);
       SvdBasedRecommender builder = new SvdBasedRecommender(configuration);
       result.add(evaluate(configuration, builder));
     }
