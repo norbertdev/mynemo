@@ -23,10 +23,11 @@ import static com.google.common.collect.Lists.newArrayList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
+import norbert.mynemo.core.evaluation.MetricType;
 import norbert.mynemo.core.evaluation.PersonnalRecommenderEvaluator;
-import norbert.mynemo.core.evaluation.PersonnalRecommenderEvaluator.MetricType;
 import norbert.mynemo.core.evaluation.PreferenceMaskerModelBuilder;
 import norbert.mynemo.core.recommendation.RecommenderFamily;
 import norbert.mynemo.core.recommendation.RecommenderType;
@@ -40,6 +41,8 @@ import norbert.mynemo.core.recommendation.recommender.ItemSimilarityRecommender;
 import norbert.mynemo.core.recommendation.recommender.SvdBasedRecommender;
 import norbert.mynemo.core.recommendation.recommender.UserSimilarityRecommender;
 
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.apache.commons.math3.stat.inference.TTest;
 import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.eval.DataModelBuilder;
 import org.apache.mahout.cf.taste.eval.RecommenderBuilder;
@@ -92,6 +95,27 @@ public class BestRecommenderSelector {
   private static final boolean DEFAULT_REUSE_STATE = true;
   public static final SpeedOption DEFAULT_SPEED = SpeedOption.EXTREMELY_SLOW;
   private static final Logger LOGGER = LoggerFactory.getLogger(BestRecommenderSelector.class);
+  /**
+   * The significance level is the maximum allowed for a p-value to consider a difference relevant.
+   * If this level is lowered, more evaluation will be considered similar. On the contrary, if this
+   * level is set higher, less evaluations will be considered similar.
+   */
+  private static final double SIGNIFICANCE_LEVEL = 0.05;
+
+  /**
+   * Removes from the given collection the evaluations with a coverage lower than the given minimum.
+   */
+  private static void removeUnallowedCoverage(Iterable<RecommenderEvaluation> evaluations,
+      double minimumCoverage) {
+
+    Iterator<RecommenderEvaluation> iterator = evaluations.iterator();
+    while (iterator.hasNext()) {
+      if (iterator.next().getEvaluationReport().getCoverage() < minimumCoverage) {
+        iterator.remove();
+      }
+    }
+  }
+
   private final DataModel dataModel;
   private final double evaluationPercentage;
   private final PersonnalRecommenderEvaluator evaluator;
@@ -117,6 +141,12 @@ public class BestRecommenderSelector {
     this.speed = speed;
     this.evaluationPercentage = evaluationPercentage;
     evaluator = new PersonnalRecommenderEvaluator(targetUser, metric, speed.exhaustive);
+  }
+
+  private boolean areSignificantlyDifferent(RecommenderEvaluation evalA, RecommenderEvaluation evalB) {
+    DescriptiveStatistics valuesA = evalA.getEvaluationReport().getValues(DEFAULT_METRIC);
+    DescriptiveStatistics valuesB = evalB.getEvaluationReport().getValues(DEFAULT_METRIC);
+    return new TTest().tTest(valuesA, valuesB, SIGNIFICANCE_LEVEL);
   }
 
   /**
@@ -209,14 +239,13 @@ public class BestRecommenderSelector {
 
     List<RecommenderEvaluation> result = new ArrayList<>();
     int numberOfIterations = 4;
-    boolean allowReuse = DEFAULT_REUSE_STATE && (evaluationPercentage == 1);
 
     // try several configurations
     for (int numberOfFeatures : newArrayList(1, 3, 5, 10)) {
 
       SvdBasedRecommenderConfiguration configuration =
           new SvdBasedRecommenderConfiguration(type, numberOfFeatures, numberOfIterations,
-              dataModel, allowReuse);
+              dataModel, reuseIsAllowed());
       SvdBasedRecommender builder = new SvdBasedRecommender(configuration);
       result.add(evaluate(configuration, builder));
     }
@@ -233,7 +262,6 @@ public class BestRecommenderSelector {
     checkArgument(type.getFamily() == RecommenderFamily.USER_SIMILARITY_BASED);
 
     List<RecommenderEvaluation> result = new ArrayList<>();
-    boolean allowReuse = DEFAULT_REUSE_STATE && evaluationPercentage == 1;
 
     // try several configurations
     for (double neighborPercentage : Lists.newArrayList(0.01, 0.1, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0,
@@ -245,13 +273,38 @@ public class BestRecommenderSelector {
                   * evaluationPercentage), 1);
 
       UserBasedRecommenderConfiguration configuration =
-          new UserBasedRecommenderConfiguration(type, numberOfUsers, dataModel, allowReuse);
+          new UserBasedRecommenderConfiguration(type, numberOfUsers, dataModel, reuseIsAllowed());
       UserSimilarityRecommender recommenderBuilder = new UserSimilarityRecommender(configuration);
 
       result.add(evaluate(configuration, recommenderBuilder));
     }
 
     return result;
+  }
+
+  /**
+   * Removes from the given collection all evaluations that are significantly worst. The left
+   * evaluations are non significantly different.
+   */
+  private void retainBestEvaluations(Collection<RecommenderEvaluation> evaluations) {
+    checkNotNull(evaluations);
+
+    EvaluationComparator comparator = new EvaluationComparator(metric);
+    Collection<RecommenderEvaluation> rejectedEvaluations = new ArrayList<>();
+
+    for (RecommenderEvaluation evalA : evaluations) {
+      for (RecommenderEvaluation evalB : evaluations) {
+        if (areSignificantlyDifferent(evalA, evalB)) {
+          rejectedEvaluations.add(Collections.max(newArrayList(evalA, evalB), comparator));
+        }
+      }
+    }
+
+    evaluations.removeAll(rejectedEvaluations);
+  }
+
+  private boolean reuseIsAllowed() {
+    return DEFAULT_REUSE_STATE && evaluationPercentage == 1 && speed.trainingPercentage == 1;
   }
 
   /**
@@ -280,14 +333,16 @@ public class BestRecommenderSelector {
         + " lesser than 0 or greater than 1.");
 
     List<RecommenderEvaluation> evaluations = evaluateAll(types);
+    removeUnallowedCoverage(evaluations, minimumCoverage);
+    retainBestEvaluations(evaluations);
 
-    RecommenderEvaluation bestEvaluation =
-        Collections.min(evaluations, new EvaluationComparator(metric, minimumCoverage));
-
-    if (bestEvaluation.getEvaluationReport().getCoverage() <= minimumCoverage) {
-      return Optional.absent();
+    Optional<RecommenderEvaluation> result;
+    if (evaluations.isEmpty()) {
+      result = Optional.absent();
+    } else {
+      result = Optional.of(Collections.min(evaluations, new EvaluationComparator(metric)));
     }
 
-    return Optional.of(bestEvaluation);
+    return result;
   }
 }

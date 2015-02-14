@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import norbert.mynemo.core.evaluation.PersonnalRecommenderEvaluator.MetricType;
+import norbert.mynemo.core.evaluation.MetricType;
 import norbert.mynemo.core.recommendation.RecommenderType;
 import norbert.mynemo.core.recommendation.configuration.SvdBasedRecommenderConfiguration;
 import norbert.mynemo.core.recommendation.configuration.UserBasedRecommenderConfiguration;

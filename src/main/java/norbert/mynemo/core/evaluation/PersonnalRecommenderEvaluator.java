@@ -47,10 +47,6 @@ import com.google.common.collect.Lists;
  * This class provides an evaluation of a recommender in the point of view of only one user.
  */
 public class PersonnalRecommenderEvaluator implements RecommenderEvaluator {
-  public enum MetricType {
-    MEAN_ABSOLUTE_ERROR, ROOT_MEAN_SQUARED_ERROR
-  }
-
   private static float capEstimatedPreference(float estimate, DataModel dataModel) {
     if (dataModel.getMaxPreference() < estimate) {
       return dataModel.getMaxPreference();

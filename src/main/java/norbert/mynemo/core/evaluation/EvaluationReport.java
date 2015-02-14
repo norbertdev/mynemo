@@ -16,6 +16,8 @@
  */
 package norbert.mynemo.core.evaluation;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 /**
@@ -59,6 +61,31 @@ public class EvaluationReport {
   }
 
   /**
+   * Returns a copy of all the values: either the list of errors for the MAE metric, or the list of
+   * squared errors for the RMSE metric.
+   */
+  public DescriptiveStatistics getValues(MetricType metric) {
+    checkNotNull(metric);
+
+    DescriptiveStatistics result;
+
+    switch (metric) {
+      case MEAN_ABSOLUTE_ERROR:
+        result = new DescriptiveStatistics(predictionErrors);
+        break;
+
+      case ROOT_MEAN_SQUARED_ERROR:
+        result = new DescriptiveStatistics(squaredPredictionErrors);
+        break;
+
+      default:
+        throw new UnsupportedOperationException();
+    }
+
+    return result;
+  }
+
+  /**
    * Returns the mean absolute error of the evaluation. The returned value can be NaN.
    */
   public double getMae() {
@@ -78,5 +105,29 @@ public class EvaluationReport {
    */
   public double getRmse() {
     return Math.sqrt(squaredPredictionErrors.getMean());
+  }
+
+  /**
+   * Returns the value of the metric. The returned value can be NaN.
+   */
+  public double getValue(MetricType metric) {
+    checkNotNull(metric);
+
+    double result;
+
+    switch (metric) {
+      case MEAN_ABSOLUTE_ERROR:
+        result = getMae();
+        break;
+
+      case ROOT_MEAN_SQUARED_ERROR:
+        result = getRmse();
+        break;
+
+      default:
+        throw new UnsupportedOperationException();
+    }
+
+    return result;
   }
 }
