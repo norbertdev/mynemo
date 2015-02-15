@@ -68,6 +68,8 @@ public class RecommendCommandParser {
   public static final String DATAMODEL_LONG_OPTION = "data-model";
 
   private static final int DEFAULT_RECOMMENDATION_NUMBER = 10;
+  /** Pause duration in millisecond between two calls to an online service. */
+  private static final long DELAY_BETWEEN_REQUESTS = 2000;
 
   // features
   private static final String FEATURES_ARG_NAME = "number";
@@ -140,7 +142,7 @@ public class RecommendCommandParser {
 
   private static void execute(RecommenderType algorithm, DataModel dataModel, Long user,
       Integer maximumRecommendations, Optional<Integer> features, Optional<Integer> iterations,
-      Optional<Integer> neighbors) {
+      Optional<Integer> neighbors) throws InterruptedException {
 
     RecommenderBuilder builder;
     switch (algorithm.getFamily()) {
@@ -170,11 +172,22 @@ public class RecommendCommandParser {
     }
 
     try {
-      System.out.println("IMDb ids of the recommended movies (score/100):");
       for (RecommendedItem recommendation : builder.buildRecommender(dataModel).recommend(user,
           maximumRecommendations)) {
-        System.out.println(recommendation.getItemID() + " ("
-            + Math.round(recommendation.getValue()) + ")");
+
+        String incompleteId = Long.toString(recommendation.getItemID());
+        String completeId = "tt" + ("0000000" + incompleteId).substring(incompleteId.length());
+        Movie movie = new Movie(completeId);
+        try {
+          System.out.print(movie.getTitle() + " (" + movie.getYear() + ")");
+        } catch (IOException e) {
+          // can't access to the online service
+        }
+        System.out.print(" " + Math.round(recommendation.getValue()));
+        System.out.println(" " + movie.getImdbUrl());
+
+        Thread.sleep(DELAY_BETWEEN_REQUESTS);
+
       }
     } catch (TasteException e) {
       throw new IllegalStateException("Error: an unknown error occurs while the recommendation"
@@ -254,7 +267,8 @@ public class RecommendCommandParser {
   /**
    * Parses and checks the given arguments, then runs the recommendation algorithm.
    */
-  public static void parse(String[] args) throws ParseException, IOException, TasteException {
+  public static void parse(String[] args) throws ParseException, IOException, TasteException,
+      InterruptedException {
 
     CommandLine commandLine = new BasicParser().parse(getOptions(), args);
 
