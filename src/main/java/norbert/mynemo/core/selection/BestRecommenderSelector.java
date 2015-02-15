@@ -35,11 +35,9 @@ import norbert.mynemo.core.recommendation.configuration.BasicRecommenderConfigur
 import norbert.mynemo.core.recommendation.configuration.ItemBasedRecommenderConfiguration;
 import norbert.mynemo.core.recommendation.configuration.RecommenderConfiguration;
 import norbert.mynemo.core.recommendation.configuration.SvdBasedRecommenderConfiguration;
-import norbert.mynemo.core.recommendation.configuration.UserBasedRecommenderConfiguration;
 import norbert.mynemo.core.recommendation.recommender.BasicRecommender;
 import norbert.mynemo.core.recommendation.recommender.ItemSimilarityRecommender;
 import norbert.mynemo.core.recommendation.recommender.SvdBasedRecommender;
-import norbert.mynemo.core.recommendation.recommender.UserSimilarityRecommender;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.inference.TTest;
@@ -51,7 +49,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
 
 /**
  * This class selects the best recommender for a given user.
@@ -88,6 +85,10 @@ public class BestRecommenderSelector {
       this.trainingPercentage = trainingPercentage;
       this.exhaustive = exhaustive;
     }
+
+    public double getTrainingPercentage() {
+      return trainingPercentage;
+    }
   }
 
   public static final double DEFAULT_EVALUATION_PERCENTAGE = 1;
@@ -122,6 +123,7 @@ public class BestRecommenderSelector {
   private final MetricType metric;
   private final SpeedOption speed;
   private final long targetUser;
+  private final BestUserRecommenderSelector userRecommenderSelector;
 
   /**
    * Builds a selector for the given user.
@@ -141,6 +143,19 @@ public class BestRecommenderSelector {
     this.speed = speed;
     this.evaluationPercentage = evaluationPercentage;
     evaluator = new PersonnalRecommenderEvaluator(targetUser, metric, speed.exhaustive);
+
+    DataModelBuilder dataModelBuilder = null;
+    if (evaluationPercentage == 1) {
+      // the evaluation percentage must be 1 because the model builder will use the whole data
+      // model (except some missing preferences from the target user), not the given one by the
+      // evaluator
+      dataModelBuilder = new PreferenceMaskerModelBuilder(dataModel, targetUser);
+    }
+
+    SelectorConfiguration configuration =
+        new SelectorConfiguration(model, user, evaluator, evaluationPercentage, reuseIsAllowed(),
+            speed, dataModelBuilder);
+    userRecommenderSelector = new BestUserRecommenderSelector(configuration);
   }
 
   private boolean areSignificantlyDifferent(RecommenderEvaluation evalA, RecommenderEvaluation evalB) {
@@ -178,8 +193,8 @@ public class BestRecommenderSelector {
    * be evaluated with different parameter values, thus the number of evaluations is usually greater
    * than the number of given algorithms.
    */
-  public List<RecommenderEvaluation> evaluateAll(Collection<RecommenderType> recommenderTypes)
-      throws TasteException {
+  public List<RecommenderEvaluation> evaluateAll(Collection<RecommenderType> recommenderTypes,
+      double minimumCoverage) throws TasteException {
 
     List<RecommenderEvaluation> result = new ArrayList<>();
 
@@ -198,7 +213,7 @@ public class BestRecommenderSelector {
           break;
 
         case USER_SIMILARITY_BASED:
-          result.addAll(evaluateUserBased(current));
+          result.addAll(userRecommenderSelector.select(current, minimumCoverage));
           break;
 
         default:
@@ -254,35 +269,6 @@ public class BestRecommenderSelector {
   }
 
   /**
-   * Evaluates the given recommender type for several configurations. The given recommender must be
-   * based on user similarity.
-   */
-  private Collection<RecommenderEvaluation> evaluateUserBased(RecommenderType type)
-      throws TasteException {
-    checkArgument(type.getFamily() == RecommenderFamily.USER_SIMILARITY_BASED);
-
-    List<RecommenderEvaluation> result = new ArrayList<>();
-
-    // try several configurations
-    for (double neighborPercentage : Lists.newArrayList(0.01, 0.1, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0,
-        64.0, 90.0)) {
-      // do not forget evaluationPercentage
-      int numberOfUsers =
-          Math.max(
-              (int) Math.round(neighborPercentage / 100.0 * dataModel.getNumUsers()
-                  * evaluationPercentage), 1);
-
-      UserBasedRecommenderConfiguration configuration =
-          new UserBasedRecommenderConfiguration(type, numberOfUsers, dataModel, reuseIsAllowed());
-      UserSimilarityRecommender recommenderBuilder = new UserSimilarityRecommender(configuration);
-
-      result.add(evaluate(configuration, recommenderBuilder));
-    }
-
-    return result;
-  }
-
-  /**
    * Removes from the given collection all evaluations that are significantly worst. The left
    * evaluations are non significantly different.
    */
@@ -332,7 +318,7 @@ public class BestRecommenderSelector {
     checkArgument(0 <= minimumCoverage && minimumCoverage <= 1, "The minimum coverage must not be"
         + " lesser than 0 or greater than 1.");
 
-    List<RecommenderEvaluation> evaluations = evaluateAll(types);
+    List<RecommenderEvaluation> evaluations = evaluateAll(types, minimumCoverage);
     removeUnallowedCoverage(evaluations, minimumCoverage);
     retainBestEvaluations(evaluations);
 
