@@ -49,13 +49,13 @@ In the preceding example, *my-ratings.txt* is your ratings exported from the Mov
 
 * Select the best algorithm for you:
 ```sh
-target/appassembler/bin/select  --data-model mynemo-dataset.tsv --user 2147483647
+target/appassembler/bin/select  --data-model mynemo-dataset.tsv  --user 2147483647
 ```
-In the preceding example, *2147483647* is the default user id given to your ratings. Other options can be given to the command. Run the command without any option to view the usage. The selection process ends by giving the options to provide to the last command. 
+In the preceding example, *2147483647* is the default user id given to your ratings. Other options can be given to the command. Run the command without any option to view the usage. The selection process ends by giving the options to provide to the last command.
 
 * Produce the recommendations:
 ```sh
-target/appassembler/bin/recommend  --algorithm USER_SIMILARITY_WITH_EUCLIDEAN_DISTANCE  --data-model mynemo-dataset.tsv --user 2147483647 --neighbors 1398
+target/appassembler/bin/recommend  --algorithm USER_SIMILARITY_WITH_EUCLIDEAN_DISTANCE  --data-model mynemo-dataset.tsv  --user 2147483647  --neighbors 1398
 ```
 In the preceding example, the options used were provided by the *select* command. Other options can be given to the command, like the number of recommendations to generate. Run the command without any option to view the usage. The command ends by giving an ordered list of recommendations, with there associated rating predictions.
 
@@ -63,4 +63,4 @@ In the preceding example, the options used were provided by the *select* command
 License
 =======
 
-[Apache License version 2.0](http://www.apache.org/licenses/LICENSE-2.0.txt). See also the LICENSE file.
+[Apache License version 2.0](http://www.apache.org/licenses/LICENSE-2.0.txt).

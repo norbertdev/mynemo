@@ -12,7 +12,7 @@
 	<description>Mynemo suggests your next movie to see. A list of top
 		recommendations is provided.
 	</description>
-	<url>https://github.com/norbertdev</url>
+	<url>https://github.com/norbertdev/mynemo</url>
 	<licenses>
 		<license>
 			<name>The Apache Software License, version 2.0</name>
@@ -52,16 +52,16 @@
 					<extraJvmArguments>-server</extraJvmArguments>
 					<programs>
 						<program>
-							<mainClass>norbert.mynemo.ui.ImportCommandParser</mainClass>
 							<id>import</id>
+							<mainClass>norbert.mynemo.ui.ImportCommandParser</mainClass>
 						</program>
 						<program>
-							<mainClass>norbert.mynemo.ui.RecommendCommandParser</mainClass>
 							<id>recommend</id>
+							<mainClass>norbert.mynemo.ui.RecommendCommandParser</mainClass>
 						</program>
 						<program>
-							<mainClass>norbert.mynemo.ui.SelectCommandParser</mainClass>
 							<id>select</id>
+							<mainClass>norbert.mynemo.ui.SelectCommandParser</mainClass>
 						</program>
 					</programs>
 				</configuration>
@@ -76,14 +76,14 @@
 			<version>18.0</version>
 		</dependency>
 		<dependency>
-			<groupId>commons-io</groupId>
-			<artifactId>commons-io</artifactId>
-			<version>2.4</version>
-		</dependency>
-		<dependency>
 			<groupId>commons-cli</groupId>
 			<artifactId>commons-cli</artifactId>
 			<version>1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.4</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>

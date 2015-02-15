@@ -1,20 +1,18 @@
 /*
  * Copyright 2015 Norbert
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package norbert.mynemo.dataimport.fileformat.input;
 
@@ -32,72 +30,63 @@ import org.apache.commons.csv.CSVRecord;
 import com.google.common.collect.UnmodifiableIterator;
 
 /**
- * <p>
- * This class represents a TSV file containing rating.
- * </p>
- * <p>
- * The columns are:
- * <ul>
- * <li>user id</li>
- * <li>IMDb id of a movie</li>
- * <li>value of the rating</li>
- * </ul>
- * </p>
+ * This class represents a file containing ratings. The format of this file is defined in the
+ * {@link MynemoRating} class.
  */
 public class MynemoRatingFile implements ImportableRatingFile {
-	private final class RatingIterator extends
-			UnmodifiableIterator<MynemoRating> {
-		private Iterator<CSVRecord> iterator = parser.iterator();
+  private final class RatingIterator extends UnmodifiableIterator<MynemoRating> {
+    private Iterator<CSVRecord> iterator = parser.iterator();
 
-		@Override
-		public boolean hasNext() {
-			boolean result = iterator.hasNext();
+    @Override
+    public boolean hasNext() {
+      boolean result = iterator.hasNext();
 
-			if (!result) {
-				try {
-					parser.close();
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
-			}
-			return result;
-		}
+      if (!result) {
+        try {
+          parser.close();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+      return result;
+    }
 
-		@Override
-		public MynemoRating next() {
-			return MynemoRating.createRating(iterator.next());
-		}
-	}
+    @Override
+    public MynemoRating next() {
+      return MynemoRating.createRating(iterator.next());
+    }
+  }
 
-	/**
-	 * Returns <code>true</code> if the given file can be parsed,
-	 * <code>false</code> otherwise.
-	 */
-	public static boolean canImport(String ratingFilepath) {
-		try (CSVParser parser = MynemoRating.createParser(ratingFilepath)) {
-			Iterator<CSVRecord> iterator = parser.iterator();
-			if (!iterator.hasNext()) {
-				// the file contains zero rating, but is nonetheless parsable
-				return true;
-			}
-			MynemoRating.createRating(iterator.next());
-		} catch (Exception e) {
-			return false;
-		}
-		return true;
-	}
+  /**
+   * Returns <code>true</code> if the given file can be parsed, <code>false</code> otherwise.
+   */
+  public static boolean canImport(String ratingFilepath) {
+    checkArgument(new File(ratingFilepath).exists(), "The file must exists.");
 
-	private final CSVParser parser;
+    try (CSVParser parser = MynemoRating.createParser(ratingFilepath)) {
+      Iterator<CSVRecord> iterator = parser.iterator();
+      if (!iterator.hasNext()) {
+        // the file contains zero rating, but is nonetheless parsable
+        return true;
+      }
+      MynemoRating.createRating(iterator.next());
+    } catch (Exception e) {
+      return false;
+    }
+    return true;
+  }
 
-	public MynemoRatingFile(String filepath) throws IOException {
-		checkArgument(filepath != null, "The rating filepath must be not null.");
-		checkArgument(new File(filepath).exists(), "The file must exist.");
+  private final CSVParser parser;
 
-		parser = MynemoRating.createParser(filepath);
-	}
+  public MynemoRatingFile(String filepath) throws IOException {
+    checkArgument(filepath != null, "The rating filepath must be not null.");
+    checkArgument(new File(filepath).exists(), "The file must exist.");
 
-	@Override
-	public Iterator<MynemoRating> iterator() {
-		return new RatingIterator();
-	}
+    parser = MynemoRating.createParser(filepath);
+  }
+
+  @Override
+  public Iterator<MynemoRating> iterator() {
+    return new RatingIterator();
+  }
 }

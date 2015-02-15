@@ -1,20 +1,18 @@
 /*
  * Copyright 2015 Norbert
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package norbert.mynemo.dataimport.fileformat.input;
 
@@ -36,10 +34,9 @@ import org.apache.mahout.cf.taste.common.TasteException;
 import com.google.common.collect.UnmodifiableIterator;
 
 /**
- * <p>
- * This class represents a TSV file exported from the MovieLens web site. It
- * contains the ratings of only one user.
- * </p>
+ * This class represents a TSV file exported from the MovieLens web site. It contains the ratings of
+ * only one user.
+ *
  * <p>
  * Each line of the source file represents a rating. The columns are:
  * <ol>
@@ -52,101 +49,97 @@ import com.google.common.collect.UnmodifiableIterator;
  * </p>
  */
 public class MovieLensRatingFile implements ImportableRatingFile {
-	/**
-	 * Iterator over a MovieLens rating file that converts the CSV records to
-	 * Mynemo ratings.
-	 */
-	private final class RatingIterator extends
-			UnmodifiableIterator<MynemoRating> {
-		private Iterator<CSVRecord> iterator = parser.iterator();
+  /**
+   * Iterator over a MovieLens rating file that converts the CSV records to Mynemo ratings.
+   */
+  private final class RatingIterator extends UnmodifiableIterator<MynemoRating> {
+    private Iterator<CSVRecord> iterator = parser.iterator();
 
-		/**
-		 * Closes the parser.
-		 */
-		private void close() {
-			try {
-				parser.close();
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
+    /**
+     * Closes the parser.
+     */
+    private void close() {
+      try {
+        parser.close();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
 
-		@Override
-		public boolean hasNext() {
-			boolean result = iterator.hasNext();
+    @Override
+    public boolean hasNext() {
+      boolean result = iterator.hasNext();
 
-			if (!result) {
-				close();
-			}
+      if (!result) {
+        close();
+      }
 
-			return result;
-		}
+      return result;
+    }
 
-		@Override
-		public MynemoRating next() {
-			CSVRecord record = iterator.next();
-			String movie = record.get(MOVIE_INDEX);
-			String value = record.get(VALUE_INDEX);
-			MynemoRating rating;
-			try {
-				rating = MynemoRating.createRatingFromMovieLens(user, movie,
-						value);
-			} catch (TasteException e) {
-				close();
-				throw new RuntimeException(e);
-			}
-			return rating;
-		}
-	}
+    @Override
+    public MynemoRating next() {
+      CSVRecord record = iterator.next();
+      String movie = record.get(MOVIE_INDEX);
+      String value = record.get(VALUE_INDEX);
+      MynemoRating rating;
+      try {
+        rating = MynemoRating.createRatingFromMovieLens(user, movie, value);
+      } catch (TasteException e) {
+        close();
+        throw new RuntimeException(e);
+      }
+      return rating;
+    }
+  }
 
-	private static final int MOVIE_INDEX = 3;
-	private static final String TEST_USER = "0";
-	private static final int VALUE_INDEX = 1;
+  private static final int MOVIE_INDEX = 3;
+  private static final String TEST_USER = "0";
+  private static final int VALUE_INDEX = 1;
 
-	/**
-	 * Returns <code>true</code> if the given file can be parsed,
-	 * <code>false</code> otherwise.
-	 */
-	public static boolean canImport(String filepath) {
-		try (CSVParser parser = createParser(filepath)) {
-			Iterator<CSVRecord> iterator = parser.iterator();
-			if (!iterator.hasNext()) {
-				// the file contains zero rating, but is nonetheless parsable
-				return true;
-			}
-			CSVRecord record = iterator.next();
-			MynemoRating.createRatingFromMovieLens(TEST_USER,
-					record.get(MOVIE_INDEX), record.get(VALUE_INDEX));
-		} catch (Exception e) {
-			// the file cannot be imported
-			return false;
-		}
-		// everything seems right
-		return true;
-	}
+  /**
+   * Returns <code>true</code> if the given file can be parsed, <code>false</code> otherwise.
+   */
+  public static boolean canImport(String filepath) {
+    try (CSVParser parser = createParser(filepath)) {
 
-	private static CSVParser createParser(String filepath) throws IOException {
-		return new CSVParser(new CleanRatingsReader(new BufferedReader(
-				new FileReader(filepath))), CSVFormat.MYSQL);
-	}
+      for (CSVRecord record : parser) {
+        // try to create just one rating
+        MynemoRating.createRatingFromMovieLens(TEST_USER, record.get(MOVIE_INDEX),
+            record.get(VALUE_INDEX));
+        break;
+      }
 
-	private final CSVParser parser;
-	private final String user;
+    } catch (Exception e) {
+      // the file cannot be imported
+      return false;
+    }
+    // everything seems right
+    return true;
+  }
 
-	public MovieLensRatingFile(String filepath, String user) throws IOException {
-		checkArgument(filepath != null, "The rating filepath must be not null.");
-		checkArgument(user != null, "The user must be not null.");
-		checkArgument(new File(filepath).exists(), "The file must exist.");
+  private static CSVParser createParser(String filepath) throws IOException {
+    return new CSVParser(new CleanRatingsReader(new BufferedReader(new FileReader(filepath))),
+        CSVFormat.MYSQL);
+  }
 
-		this.user = user;
-		parser = createParser(filepath);
-	}
+  private final CSVParser parser;
+  private final String user;
 
-	/**
-	 * Returns an iterator on the ratings.
-	 */
-	@Override
-	public Iterator<MynemoRating> iterator() {
-		return new RatingIterator();
-	}
+  public MovieLensRatingFile(String filepath, String user) throws IOException {
+    checkArgument(filepath != null, "The rating filepath must be not null.");
+    checkArgument(user != null, "The user must be not null.");
+    checkArgument(new File(filepath).exists(), "The file must exist.");
+
+    this.user = user;
+    parser = createParser(filepath);
+  }
+
+  /**
+   * Returns an iterator on the ratings.
+   */
+  @Override
+  public Iterator<MynemoRating> iterator() {
+    return new RatingIterator();
+  }
 }
