@@ -27,7 +27,6 @@ import java.util.regex.Pattern;
 import norbert.mynemo.dataimport.fileformat.MynemoRating;
 
 import org.apache.commons.io.LineIterator;
-import org.apache.mahout.cf.taste.common.TasteException;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterators;
@@ -93,15 +92,7 @@ public class TenMillionRatingImporter implements RatingImporter {
       String value = values[VALUE_INDEX];
 
       // create the rating
-      MynemoRating nextRating;
-      try {
-        nextRating = MynemoRating.createRatingFromMovieLens(user, imdbId, value);
-      } catch (TasteException e) {
-        close();
-        throw new RuntimeException(e);
-      }
-
-      return nextRating;
+      return new MynemoRating(user, imdbId, value);
     }
   }
 

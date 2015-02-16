@@ -30,7 +30,6 @@ import norbert.mynemo.dataimport.fileformat.MynemoRating;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.mahout.cf.taste.common.TasteException;
 
 import com.google.common.collect.UnmodifiableIterator;
 
@@ -80,16 +79,7 @@ public class MovieLensRatingImporter implements RatingImporter {
     @Override
     public MynemoRating next() {
       CSVRecord record = iterator.next();
-      String movie = record.get(MOVIE_INDEX);
-      String value = record.get(VALUE_INDEX);
-      MynemoRating rating;
-      try {
-        rating = MynemoRating.createRatingFromMovieLens(user, movie, value);
-      } catch (TasteException e) {
-        close();
-        throw new RuntimeException(e);
-      }
-      return rating;
+      return new MynemoRating(user, record.get(MOVIE_INDEX), record.get(VALUE_INDEX));
     }
   }
 
@@ -105,8 +95,7 @@ public class MovieLensRatingImporter implements RatingImporter {
 
       for (CSVRecord record : parser) {
         // try to create just one rating
-        MynemoRating.createRatingFromMovieLens(TEST_USER, record.get(MOVIE_INDEX),
-            record.get(VALUE_INDEX));
+        new MynemoRating(TEST_USER, record.get(MOVIE_INDEX), record.get(VALUE_INDEX));
         break;
       }
 

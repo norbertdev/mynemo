@@ -29,7 +29,6 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.mahout.cf.taste.common.TasteException;
 
 /**
  * A Mynemo rating encapsulates the user that give the rating, the rated movie and the value of the
@@ -71,52 +70,6 @@ public class MynemoRating {
   private static final int VALUE_INDEX = 2;
 
   /**
-   * Converts a rating value from MovieLens to the Mynemo rating scale. MovieLens values go from 0.5
-   * to 5, Mynemo values go from 0 to 100.
-   */
-  private static String convertRatingValue(String value) throws TasteException {
-    switch (value) {
-      case "0.5":
-        return "10";
-
-      case "1":
-      case "1.0":
-        return "20";
-
-      case "1.5":
-        return "30";
-
-      case "2":
-      case "2.0":
-        return "40";
-
-      case "2.5":
-        return "50";
-
-      case "3":
-      case "3.0":
-        return "60";
-
-      case "3.5":
-        return "70";
-
-      case "4":
-      case "4.0":
-        return "80";
-
-      case "4.5":
-        return "90";
-
-      case "5":
-      case "5.0":
-        return "100";
-
-      default:
-        throw new TasteException("The rating value is unknown.");
-    }
-  }
-
-  /**
    * Returns a parser able to read a Mynemo rating file.
    *
    * @param filepath file to read
@@ -146,15 +99,6 @@ public class MynemoRating {
   public static MynemoRating createRating(CSVRecord record) {
     return new MynemoRating(record.get(USER_INDEX), record.get(MOVIE_INDEX),
         record.get(VALUE_INDEX));
-  }
-
-  /**
-   * Creates a Mynemo rating from a MovieLens rating. The user id and movie id are reused, thus the
-   * movie id must be the IMDb id. The rating value is converted.
-   */
-  public static MynemoRating createRatingFromMovieLens(String user, String movie, String value)
-      throws TasteException {
-    return new MynemoRating(user, movie, convertRatingValue(value));
   }
 
   private final String movie;
