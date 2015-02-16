@@ -23,6 +23,7 @@ import static com.google.common.base.Preconditions.checkState;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
@@ -251,7 +252,7 @@ public class MaxNeighborUserFilter implements RatingWriter {
 
   /**
    * Returns the most similar users according to the given similarity and the {@link #allUsers}
-   * field.
+   * field. The target user is included in the returned collection.
    */
   private HashSet<String> getMostSimilarUsers(UserSimilarity similarity) throws TasteException {
     Queue<ComparableUser> mostSimilarUsers = MinMaxPriorityQueue.maximumSize(maxUsers).create();
@@ -266,6 +267,15 @@ public class MaxNeighborUserFilter implements RatingWriter {
     HashSet<String> result = new HashSet<String>();
     for (ComparableUser currentUser : mostSimilarUsers) {
       result.add(currentUser.getUser());
+    }
+
+    // ensure that the target user is included
+    if (!result.contains(targetUser)) {
+      // remove a user, then add the target user
+      Iterator<String> iterator = result.iterator();
+      iterator.next();
+      iterator.remove();
+      result.add(targetUser);
     }
 
     return result;
