@@ -34,10 +34,8 @@ import norbert.mynemo.core.recommendation.RecommenderType;
 import norbert.mynemo.core.recommendation.configuration.BasicRecommenderConfiguration;
 import norbert.mynemo.core.recommendation.configuration.ItemBasedRecommenderConfiguration;
 import norbert.mynemo.core.recommendation.configuration.RecommenderConfiguration;
-import norbert.mynemo.core.recommendation.configuration.SvdBasedRecommenderConfiguration;
 import norbert.mynemo.core.recommendation.recommender.BasicRecommender;
 import norbert.mynemo.core.recommendation.recommender.ItemSimilarityRecommender;
-import norbert.mynemo.core.recommendation.recommender.SvdBasedRecommender;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.inference.TTest;
@@ -122,6 +120,7 @@ public class BestRecommenderSelector {
   private final PersonnalRecommenderEvaluator evaluator;
   private final MetricType metric;
   private final SpeedOption speed;
+  private final SvdRecommenderSelector svdRecommenderSelector;
   private final long targetUser;
   private final BestUserRecommenderSelector userRecommenderSelector;
 
@@ -155,7 +154,8 @@ public class BestRecommenderSelector {
     SelectorConfiguration configuration =
         new SelectorConfiguration(model, user, evaluator, evaluationPercentage, reuseIsAllowed(),
             speed, dataModelBuilder);
-    userRecommenderSelector = new BestUserRecommenderSelector(configuration);
+    userRecommenderSelector = new BestUserRecommenderSelector(selectorConfiguration);
+    svdRecommenderSelector = new SvdRecommenderSelector(selectorConfiguration);
   }
 
   private boolean areSignificantlyDifferent(RecommenderEvaluation evalA, RecommenderEvaluation evalB) {
@@ -209,7 +209,7 @@ public class BestRecommenderSelector {
           break;
 
         case SVD_BASED:
-          result.addAll(evaluateSvdBased(current));
+          result.addAll(svdRecommenderSelector.select(current, minimumCoverage));
           break;
 
         case USER_SIMILARITY_BASED:
@@ -242,30 +242,6 @@ public class BestRecommenderSelector {
         new ItemBasedRecommenderConfiguration(recommenderType);
 
     return newArrayList(evaluate(configuration, new ItemSimilarityRecommender(configuration)));
-  }
-
-  /**
-   * Evaluates the given recommender type for several configurations. The given recommender must be
-   * based on SVD.
-   */
-  private Collection<RecommenderEvaluation> evaluateSvdBased(RecommenderType type)
-      throws TasteException {
-    checkArgument(type.getFamily() == RecommenderFamily.SVD_BASED);
-
-    List<RecommenderEvaluation> result = new ArrayList<>();
-    int numberOfIterations = 4;
-
-    // try several configurations
-    for (int numberOfFeatures : newArrayList(1, 3, 5, 10)) {
-
-      SvdBasedRecommenderConfiguration configuration =
-          new SvdBasedRecommenderConfiguration(type, numberOfFeatures, numberOfIterations,
-              dataModel, reuseIsAllowed());
-      SvdBasedRecommender builder = new SvdBasedRecommender(configuration);
-      result.add(evaluate(configuration, builder));
-    }
-
-    return result;
   }
 
   /**

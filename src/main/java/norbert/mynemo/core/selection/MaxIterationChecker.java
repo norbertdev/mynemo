@@ -17,13 +17,13 @@
 package norbert.mynemo.core.selection;
 
 import org.apache.commons.math3.optim.ConvergenceChecker;
-import org.apache.commons.math3.optim.univariate.UnivariatePointValuePair;
 
 /**
  * This checker declares a function convergent if the maximum number of iterations is reached or
  * exceeded.
  */
-public class MaxIterationChecker implements ConvergenceChecker<UnivariatePointValuePair> {
+public class MaxIterationChecker<T> implements ConvergenceChecker<T> {
+
   private final int maxIteration;
 
   public MaxIterationChecker(int maxIterations) {
@@ -31,8 +31,7 @@ public class MaxIterationChecker implements ConvergenceChecker<UnivariatePointVa
   }
 
   @Override
-  public boolean converged(int iteration, UnivariatePointValuePair previous,
-      UnivariatePointValuePair current) {
+  public boolean converged(int iteration, T previous, T current) {
     return maxIteration <= iteration;
   }
 }

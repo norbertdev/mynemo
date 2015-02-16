@@ -72,7 +72,8 @@ class BestUserRecommenderSelector {
     checkArgument(type.getFamily() == RecommenderFamily.USER_SIMILARITY_BASED);
 
     // initialize necessary optimization data
-    ConvergenceChecker<UnivariatePointValuePair> checker = new MaxIterationChecker(MAX_ITERATIONS);
+    ConvergenceChecker<UnivariatePointValuePair> checker =
+        new MaxIterationChecker<UnivariatePointValuePair>(MAX_ITERATIONS);
     UserBasedRecommenderEvaluationFunction function =
         new UserBasedRecommenderEvaluationFunction(configuration, type, minimumCoverage);
     UnivariateObjectiveFunction objectiveFunction = new UnivariateObjectiveFunction(function);
