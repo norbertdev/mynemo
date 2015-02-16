@@ -31,6 +31,7 @@ import norbert.mynemo.dataimport.scraping.CkRating;
 import norbert.mynemo.dataimport.scraping.input.CkMappingFile;
 import norbert.mynemo.dataimport.scraping.input.CkRatingFile;
 import norbert.mynemo.dataimport.scraping.input.CkScraper;
+import norbert.mynemo.dataimport.scraping.input.MoviePageLoader;
 import norbert.mynemo.dataimport.scraping.input.TciPageLoader;
 import norbert.mynemo.dataimport.scraping.output.CkMappingWriter;
 import norbert.mynemo.dataimport.scraping.output.CkRatingWriter;
@@ -44,7 +45,7 @@ public class Scraper {
 
   private final List<CkMapping> loadedMappings;
   private final List<CkRating> loadedRatings;
-  private final List<String> loadedUsers;
+  private final Set<String> loadedUsers;
   private final String outputMappingFilepath;
   private final String outputRatingFilepath;
 
@@ -63,7 +64,7 @@ public class Scraper {
     this.outputMappingFilepath = outputMappingFilepath;
     this.outputRatingFilepath = outputRatingFilepath;
 
-    loadedUsers = new ArrayList<>();
+    loadedUsers = new HashSet<>();
     loadedMappings = new ArrayList<>();
     loadedRatings = new ArrayList<>();
 
@@ -103,7 +104,7 @@ public class Scraper {
    * Returns the users in the {@link #loadedUsers} field that does not have any rating in the
    * {@link #loadedRatings} field.
    */
-  private List<String> getUserWithoutRating() {
+  private Set<String> getUserWithoutRating() {
     Set<String> usersWithRatings = new HashSet<>();
 
     // put the users with ratings into a hash set for speed improvement
@@ -111,7 +112,7 @@ public class Scraper {
       usersWithRatings.add(rating.getUser());
     }
 
-    List<String> result = new ArrayList<>();
+    Set<String> result = new HashSet<>();
 
     // test each user
     for (String user : loadedUsers) {
@@ -145,7 +146,11 @@ public class Scraper {
 
       loadedUsers.addAll(TciPageLoader.getUsers(filepath));
 
-    } else if (CkRatingFile.canParse(filepath)) {
+    } else if (MoviePageLoader.canParse(filepath))
+
+      loadedUsers.addAll(MoviePageLoader.getUsers(filepath));
+
+    else if (CkRatingFile.canParse(filepath)) {
 
       for (CkRating rating : new CkRatingFile(filepath)) {
         loadedRatings.add(rating);

@@ -44,9 +44,10 @@ public class ScrapeCommandParser {
   private static final char IN_CHAR_OPTION = 'i';
   private static final String IN_DESCRIPTION = "space-separated input files containing users to"
       + " scrap, already scraped users and already scraped movies. A file containing some users"
-      + " to scrape are the best TCI html pages downloaded from the web site. The others files"
-      + " were previously generated from this command, they are merged with the new scraped data."
-      + " At last one file must be provided.";
+      + " to scrape are the best TCI html pages downloaded from the CK web site, or a movie html"
+      + " page from the same web site. The others acceptable files are those previously generated"
+      + " from this command: they are merged with the new scraped data. At last one file must be"
+      + " provided.";
   private static final String IN_LONG_OPTION = "in";
 
   // output file for scraped movies
