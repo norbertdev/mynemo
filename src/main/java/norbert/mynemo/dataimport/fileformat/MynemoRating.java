@@ -102,6 +102,28 @@ public class MynemoRating {
         record.get(VALUE_INDEX));
   }
 
+  /**
+   * Returns <code>true</code> if the rating can be created from the given parameters. Returns
+   * <code>false</code> otherwise. If one parameter is <code>null</code>, if the rating valuecannot
+   * be parsed as a <code>double</code> and if the value is out of the accepted range, a rating is
+   * invalid.
+   */
+  public static boolean isValid(String user, String movie, String value) {
+    double numericValue;
+    if (user == null || movie == null || value == null) {
+      return false;
+    }
+
+    try {
+      Long.parseLong(movie);
+      numericValue = Float.parseFloat(value);
+    } catch (NumberFormatException e) {
+      return false;
+    }
+
+    return MINIMUM_RATING_VALUE <= numericValue && numericValue <= MAXIMUM_RATING_VALUE;
+  }
+
   private final String movie;
   private final String user;
   private final String value;
@@ -110,12 +132,8 @@ public class MynemoRating {
    * Creates a rating with the given value by the given user to the given movie.
    */
   public MynemoRating(String user, String movie, String value) {
-    checkArgument(user != null, "The user must not be null.");
-    checkArgument(movie != null, "The movie must not be null.");
-    checkArgument(value != null, "The value must not be null.");
-    int numericValue = Integer.parseInt(value);
-    checkArgument(MINIMUM_RATING_VALUE <= numericValue && numericValue <= MAXIMUM_RATING_VALUE,
-        "The rating value is not valid.");
+    checkArgument(isValid(user, movie, value), "Unable to create the Mynemo rating with from the"
+        + " user '" + user + "' on the movie '" + movie + "' with the value '" + value + "'.");
 
     this.user = user;
     this.movie = movie;

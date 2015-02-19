@@ -84,25 +84,28 @@ public class MovieLensRatingImporter implements RatingImporter {
   }
 
   private static final int MOVIE_INDEX = 3;
+  private static final int RECORD_SIZE = 5;
   private static final String TEST_USER = "0";
   private static final int VALUE_INDEX = 1;
 
   /**
    * Returns <code>true</code> if the given file can be parsed, <code>false</code> otherwise.
    */
-  public static boolean canImport(String filepath) {
-    try (CSVParser parser = createParser(filepath)) {
+  public static boolean canImport(String filepath) throws IOException {
+    checkArgument(new File(filepath).exists(), "The file must exist.");
 
-      for (CSVRecord record : parser) {
-        // try to create just one rating
-        new MynemoRating(TEST_USER, record.get(MOVIE_INDEX), record.get(VALUE_INDEX));
-        break;
-      }
-
-    } catch (Exception e) {
-      // the file cannot be imported
+    if (!CleanRatingsReader.canClean(filepath)) {
       return false;
     }
+
+    try (CSVParser parser = createParser(filepath)) {
+      for (CSVRecord record : parser) {
+        // try to create just one rating
+        return record.size() == RECORD_SIZE
+            && MynemoRating.isValid(TEST_USER, record.get(MOVIE_INDEX), record.get(VALUE_INDEX));
+      }
+    }
+
     // everything seems right
     return true;
   }

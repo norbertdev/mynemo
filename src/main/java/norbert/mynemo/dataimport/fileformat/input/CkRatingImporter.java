@@ -77,7 +77,7 @@ public class CkRatingImporter implements RatingImporter {
     }
   }
 
-  public static boolean canImport(String ratingFilepath, String mappingFilepath) {
+  public static boolean canImport(String ratingFilepath, String mappingFilepath) throws IOException {
     return CkRatingFile.canParse(ratingFilepath) && CkMappingFile.canParse(mappingFilepath);
   }
 

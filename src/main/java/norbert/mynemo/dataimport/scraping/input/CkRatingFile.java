@@ -62,19 +62,13 @@ public class CkRatingFile implements Iterable<CkRating> {
   /**
    * Returns <code>true</code> if the given file can be parsed, <code>false</code> otherwise.
    */
-  public static boolean canParse(String filepath) {
+  public static boolean canParse(String filepath) throws IOException {
     checkArgument(new File(filepath).exists(), "The file must exists.");
 
     try (CSVParser parser = CkRating.createParser(filepath)) {
-
       for (CSVRecord record : parser) {
-        CkRating.createRating(record);
-        break;
+        return CkRating.isValid(record);
       }
-
-    } catch (Exception e) {
-      // the file is not parsable
-      return false;
     }
 
     // everything seems right

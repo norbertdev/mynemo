@@ -88,6 +88,15 @@ public class CkMapping {
     return new CSVPrinter(new BufferedWriter(new FileWriter(filepath)), CSV_FORMAT_FOR_PRINTER);
   }
 
+  /**
+   * Returns <code>true</code> if the mapping can be created from the given parameters. Returns
+   * <code>false</code> otherwise.
+   */
+  public static boolean isValid(CSVRecord record) {
+    return record.isConsistent() && record.isMapped(CK_MOVIE_HEADER)
+        && record.isMapped(IMDB_MOVIE_HEADER);
+  }
+
   private final String ckMovie;
 
   private final String imdbMovie;

@@ -19,6 +19,8 @@ package norbert.mynemo.dataimport.fileformat.input;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 
@@ -29,6 +31,22 @@ import java.io.Reader;
 public class CleanRatingsReader extends Reader {
 
   private static final String EXPECTED_FIRST_LINE = "<text>";
+
+  /**
+   * Returns <code>true</code> if the given file can be cleaned. Returns <code>false</code>
+   * otherwise, notably if <code>filepath == null</code>, if the file can't be found or if the file
+   * does not begin with the expected line.
+   */
+  public static boolean canClean(String filepath) throws IOException {
+    if (filepath == null || !new File(filepath).exists()) {
+      return false;
+    }
+
+    try (BufferedReader reader = new BufferedReader(new FileReader(filepath))) {
+      return EXPECTED_FIRST_LINE.equals(reader.readLine());
+    }
+  }
+
   private boolean firstReading;
   private boolean lastReading;
   private final BufferedReader previousReader;

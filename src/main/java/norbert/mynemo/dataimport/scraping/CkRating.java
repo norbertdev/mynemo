@@ -92,6 +92,15 @@ public class CkRating {
     return new CkRating(record.get(USER_HEADER), record.get(MOVIE_HEADER), record.get(VALUE_HEADER));
   }
 
+  /**
+   * Returns <code>true</code> if the rating can be created from the given parameters. Returns
+   * <code>false</code> otherwise.
+   */
+  public static boolean isValid(CSVRecord record) {
+    return record != null && record.isConsistent() && record.isMapped(USER_HEADER)
+        && record.isMapped(MOVIE_HEADER) && record.isMapped(VALUE_HEADER);
+  }
+
   private final String movie;
   private final String user;
   private final String value;
