@@ -17,17 +17,14 @@
 package norbert.mynemo.dataimport.fileformat.output;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.collect.Lists.newArrayList;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Collection;
 
 import norbert.mynemo.dataimport.fileformat.MynemoRating;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 
 /**
  * This writer scales the value of a rating if necessary. The Mynemo scale goes from 0 to 100. If
@@ -35,47 +32,26 @@ import norbert.mynemo.dataimport.fileformat.MynemoRating;
  * scaled such as the new maximum value is 100.
  */
 public class ScaleValueWriter implements RatingWriter {
-  /**
-   * This comparator orders the ratings by their numeric value. <code>r1 < r2</code> if
-   * <code>r1.value < r2.value</code>.
-   */
-  private class RatingComparator implements Comparator<MynemoRating> {
-    @Override
-    public int compare(MynemoRating o1, MynemoRating o2) {
-      double difference = parseValue(o1) - parseValue(o2);
-      if (difference < 0) {
-        return -1;
-      } else if (0 < difference) {
-        return 1;
-      } else {
-        return 0;
-      }
-    }
-  }
 
-  /**
-   * Returns the numeric value of the given rating.
-   */
-  private static double parseValue(MynemoRating rating) {
-    return Double.parseDouble(rating.getValue());
-  }
-
-  /** Map containing all ratings to write. The key is the user, the value is a list of its ratings. */
-  private final Map<String, List<MynemoRating>> allRatings;
-  private final Comparator<? super MynemoRating> COMPARATOR = new RatingComparator();
   private final RatingWriter nextWriter;
+  private final Scaler scaler;
+  private final Multimap<String, MynemoRating> unwrittenRatings;
 
   public ScaleValueWriter(RatingWriter nextWriter) {
     checkNotNull(nextWriter);
 
     this.nextWriter = nextWriter;
-    allRatings = new HashMap<>();
+
+    scaler = new Scaler();
+    unwrittenRatings = HashMultimap.create();
   }
 
   @Override
   public void close() throws IOException {
-    writeAllRatings();
-    allRatings.clear();
+    for (MynemoRating rating : unwrittenRatings.values()) {
+      nextWriter.write(scaler.scale(rating));
+    }
+    unwrittenRatings.clear();
     nextWriter.close();
   }
 
@@ -83,40 +59,27 @@ public class ScaleValueWriter implements RatingWriter {
   public void write(MynemoRating rating) throws IOException {
     checkNotNull(rating);
 
-    String user = rating.getUser();
-    if (!allRatings.containsKey(user)) {
-      allRatings.put(user, newArrayList(rating));
-    } else {
-      allRatings.get(user).add(rating);
+    final String user = rating.getUser();
+
+    if (scaler.cantScaleRatingsOf(user)) {
+      nextWriter.write(rating);
+      return;
+    }
+
+    unwrittenRatings.put(user, rating);
+
+    if (scaler.updateWith(rating).cantScaleRatingsOf(user)) {
+      writeAll(unwrittenRatings.get(user));
+      unwrittenRatings.removeAll(user);
     }
   }
 
   /**
-   * Writes all the ratings contained in the {@link #allRatings} field. Adapts the value of each
-   * rating if necessary.
+   * Writes the given ratings into the next writer.
    */
-  private void writeAllRatings() throws IOException {
-    for (Entry<String, List<MynemoRating>> entry : allRatings.entrySet()) {
-      List<MynemoRating> ratings = entry.getValue();
-
-      // find the maximum value
-      double maxValue = parseValue(Collections.max(ratings, COMPARATOR));
-
-      // rewrite the values if necessary
-      if (maxValue <= 50) {
-        double factor = 100 / maxValue;
-        List<MynemoRating> newRatings = newArrayList();
-        for (MynemoRating rating : ratings) {
-          newRatings.add(new MynemoRating(rating.getUser(), rating.getMovie(), Integer
-              .toString((int) (parseValue(rating) * factor))));
-        }
-        ratings = newRatings;
-      }
-
-      // write
-      for (MynemoRating rating : ratings) {
-        nextWriter.write(rating);
-      }
+  private void writeAll(Collection<MynemoRating> ratings) throws IOException {
+    for (MynemoRating rating : ratings) {
+      nextWriter.write(rating);
     }
   }
 }

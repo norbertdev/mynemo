@@ -58,11 +58,11 @@ public class MynemoRating {
   /**
    * Rating value superior to this maximum is invalid.
    */
-  private static final int MAXIMUM_RATING_VALUE = 100;
+  public static final int MAXIMUM_RATING_VALUE = 100;
   /**
    * Rating value inferior to this minimum is invalid.
    */
-  private static final int MINIMUM_RATING_VALUE = 0;
+  public static final int MINIMUM_RATING_VALUE = 0;
   /**
    * The movie index in a rating record. That defines the Mynemo rating file format.
    */
