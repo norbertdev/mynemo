@@ -24,6 +24,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -49,6 +51,10 @@ public class MynemoRating {
    * Format of the CSV entries. That defines the Mynemo rating file format.
    */
   private static final CSVFormat CSV_FORMAT = CSVFormat.MYSQL;
+  /**
+   * Set containing all different movie, user and rating ids built by this class.
+   */
+  private static final Map<String, String> ID_CACHE = new HashMap<String, String>();
   /**
    * Rating value superior to this maximum is invalid.
    */
@@ -103,6 +109,16 @@ public class MynemoRating {
   }
 
   /**
+   * Puts the given id in the cache, and returns it, or an equal cached id.
+   */
+  private static String getCacheId(String id) {
+    if (!ID_CACHE.containsKey(id)) {
+      ID_CACHE.put(id, id);
+    }
+    return ID_CACHE.get(id);
+  }
+
+  /**
    * Returns <code>true</code> if the rating can be created from the given parameters. Returns
    * <code>false</code> otherwise. If one parameter is <code>null</code>, if the rating valuecannot
    * be parsed as a <code>double</code> and if the value is out of the accepted range, a rating is
@@ -135,9 +151,9 @@ public class MynemoRating {
     checkArgument(isValid(user, movie, value), "Unable to create the Mynemo rating with from the"
         + " user '" + user + "' on the movie '" + movie + "' with the value '" + value + "'.");
 
-    this.user = user;
-    this.movie = movie;
-    this.value = value;
+    this.user = getCacheId(user);
+    this.movie = getCacheId(movie);
+    this.value = getCacheId(value);
   }
 
   @Override

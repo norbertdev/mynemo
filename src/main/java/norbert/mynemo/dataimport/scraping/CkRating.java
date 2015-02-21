@@ -25,6 +25,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -59,6 +61,10 @@ public class CkRating {
   /** Format of the CSV entries for the printer. */
   private static final CSVFormat CSV_FORMAT_FOR_PRINTER = CSVFormat.MYSQL.withHeader(USER_HEADER,
       MOVIE_HEADER, VALUE_HEADER).withSkipHeaderRecord();
+  /**
+   * Set containing all different movie, user and rating ids built by this class.
+   */
+  private static final Map<String, String> ID_CACHE = new HashMap<String, String>();
 
   /**
    * Returns a parser able to read a CK rating file.
@@ -93,6 +99,16 @@ public class CkRating {
   }
 
   /**
+   * Puts the given id in the cache, and returns it, or an equal cached id.
+   */
+  private static String getCacheId(String id) {
+    if (!ID_CACHE.containsKey(id)) {
+      ID_CACHE.put(id, id);
+    }
+    return ID_CACHE.get(id);
+  }
+
+  /**
    * Returns <code>true</code> if the rating can be created from the given parameters. Returns
    * <code>false</code> otherwise.
    */
@@ -106,9 +122,9 @@ public class CkRating {
   private final String value;
 
   public CkRating(String user, String movie, String value) {
-    this.user = user;
-    this.movie = movie;
-    this.value = value;
+    this.user = getCacheId(user);
+    this.movie = getCacheId(movie);
+    this.value = getCacheId(value);
   }
 
   public String getMovie() {
