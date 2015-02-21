@@ -24,27 +24,20 @@ import norbert.mynemo.core.recommendation.RecommenderFamily;
 import norbert.mynemo.core.recommendation.RecommenderType;
 
 import org.apache.commons.math3.optim.ConvergenceChecker;
+import org.apache.commons.math3.optim.InitialGuess;
 import org.apache.commons.math3.optim.MaxEval;
-import org.apache.commons.math3.optim.MaxIter;
+import org.apache.commons.math3.optim.PointValuePair;
+import org.apache.commons.math3.optim.SimpleBounds;
 import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
-import org.apache.commons.math3.optim.univariate.BrentOptimizer;
-import org.apache.commons.math3.optim.univariate.SearchInterval;
-import org.apache.commons.math3.optim.univariate.UnivariateObjectiveFunction;
-import org.apache.commons.math3.optim.univariate.UnivariatePointValuePair;
+import org.apache.commons.math3.optim.nonlinear.scalar.ObjectiveFunction;
+import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizer;
+import org.apache.commons.math3.random.JDKRandomGenerator;
 import org.apache.mahout.cf.taste.common.TasteException;
 
 /**
  * This selector performs evaluations on a user-similarity based recommender for a user.
  */
 class UserRecommenderSelector {
-  private static final double ABS_FOR_STOPPING_CRITERION = 0.01;
-  private static final int MAX_EVALUATIONS = 1024;
-  /**
-   * Maximum iterations allowed. the number of evaluations is ahead by 2 from the number of
-   * iterations in the Brent optimizer.
-   */
-  private static final int MAX_ITERATIONS = MAX_EVALUATIONS - 2;
-  private static final double REL_FOR_STOPPING_CRITERION = 0.001;
 
   private final SelectorConfiguration configuration;
   private final int maxNeighbors;
@@ -72,21 +65,57 @@ class UserRecommenderSelector {
     checkArgument(0 <= minimumCoverage && minimumCoverage <= 1, "The minimum coverage must be"
         + "between 0 and 1.");
 
-    // initialize necessary optimization data
-    ConvergenceChecker<UnivariatePointValuePair> checker =
-        new MaxIterationChecker<UnivariatePointValuePair>(MAX_ITERATIONS);
-    UserBasedRecommenderEvaluationFunction function =
+    final UserBasedRecommenderEvaluationFunction function =
         new UserBasedRecommenderEvaluationFunction(configuration, type, minimumCoverage);
-    UnivariateObjectiveFunction objectiveFunction = new UnivariateObjectiveFunction(function);
-    BrentOptimizer optimizer =
-        new BrentOptimizer(REL_FOR_STOPPING_CRITERION, ABS_FOR_STOPPING_CRITERION, checker);
-    MaxIter maxIter = new MaxIter(MAX_ITERATIONS);
-    MaxEval maxEval = new MaxEval(MAX_EVALUATIONS);
-    SearchInterval searchInterval = new SearchInterval(1, maxNeighbors);
-    GoalType goalType = GoalType.MINIMIZE;
+
+    // find a good initial guess: test 10%, 20%… 90% of maximum neighbors
+    double secondBestInitialValue = 1;
+    double bestInitialValue = 0;
+    double bestEvalResult = Integer.MAX_VALUE;
+    for (double factor = 0.1; factor <= 0.9; factor += 0.1) {
+      double currentNumNeighbors = maxNeighbors * factor;
+      double evalResult = function.value(currentNumNeighbors);
+      if (evalResult < bestEvalResult) {
+        bestEvalResult = evalResult;
+        secondBestInitialValue = bestInitialValue;
+        bestInitialValue = currentNumNeighbors;
+      }
+    }
+
+    // initialize the quality parameters of the CMAES optimizer
+    final double minNeighbors = 1;
+    final double initialGuessNeighbors = bestInitialValue;
+    final double sigmaNeighbors =
+        Math.min(Math.abs(bestInitialValue - secondBestInitialValue),
+            Math.min(maxNeighbors - bestInitialValue, bestInitialValue - 1));
+    // not sure about that
+    final int populationSize = (int) (Math.log10(maxNeighbors) / Math.log10(2));
+    // inhibit the exception throw if the maximum number of evaluation is reached
+    final int maxCmaesEvaluations = Integer.MAX_VALUE;
+    // not sure about that
+    final int maxCmaesIterations = (int) (Math.log10(maxNeighbors) / Math.log10(2));
+
+    // initialize the other parameters
+    final ConvergenceChecker<PointValuePair> checker = new MaxIterationChecker<PointValuePair>(20);
+    final ObjectiveFunction objectiveFunction = new ObjectiveFunction(function);
+    final CMAESOptimizer optimizer =
+        new CMAESOptimizer(maxCmaesIterations, 1.0, true, 0, 0, new JDKRandomGenerator(), false,
+            checker);
+
+    final MaxEval maxEval = new MaxEval(maxCmaesEvaluations);
+    final GoalType goalType = GoalType.MINIMIZE;
+    final SimpleBounds bounds =
+        new SimpleBounds(new double[] {minNeighbors, minNeighbors}, new double[] {maxNeighbors,
+            maxNeighbors});
+    final InitialGuess initialGuess =
+        new InitialGuess(new double[] {initialGuessNeighbors, initialGuessNeighbors});
+    final CMAESOptimizer.PopulationSize popSize =
+        new CMAESOptimizer.PopulationSize((populationSize));
+    final CMAESOptimizer.Sigma sigma =
+        new CMAESOptimizer.Sigma(new double[] {sigmaNeighbors, sigmaNeighbors});
 
     // run the optimizer
-    optimizer.optimize(maxIter, maxEval, objectiveFunction, searchInterval, goalType);
+    optimizer.optimize(objectiveFunction, goalType, initialGuess, popSize, sigma, bounds, maxEval);
 
     return function.getEvaluations();
   }

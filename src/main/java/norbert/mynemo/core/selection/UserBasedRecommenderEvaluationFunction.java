@@ -31,6 +31,7 @@ import norbert.mynemo.core.recommendation.RecommenderType;
 import norbert.mynemo.core.recommendation.configuration.UserBasedRecommenderConfiguration;
 import norbert.mynemo.core.recommendation.recommender.UserSimilarityRecommender;
 
+import org.apache.commons.math3.analysis.MultivariateFunction;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.eval.DataModelBuilder;
@@ -51,7 +52,7 @@ import org.apache.mahout.cf.taste.model.DataModel;
  * Because this class implements the {@link UnivariateFunction}, it can be used by a
  * {@link org.apache.commons.math3.optim.univariate.UnivariateOptimizer UnivariateOptimizer}.
  */
-class UserBasedRecommenderEvaluationFunction implements UnivariateFunction {
+class UserBasedRecommenderEvaluationFunction implements UnivariateFunction, MultivariateFunction {
 
   private final Map<Integer, Double> cachedResults;
   private final DataModel dataModel;
@@ -128,5 +129,10 @@ class UserBasedRecommenderEvaluationFunction implements UnivariateFunction {
     cachedResults.put(numNeighbors, result);
 
     return result;
+  }
+
+  @Override
+  public double value(double[] point) {
+    return value(point[0]);
   }
 }
