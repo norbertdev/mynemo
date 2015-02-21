@@ -21,7 +21,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import norbert.mynemo.core.evaluation.PersonnalRecommenderEvaluator;
 import norbert.mynemo.core.recommendation.RecommenderFamily;
@@ -51,6 +53,15 @@ import org.apache.mahout.cf.taste.model.DataModel;
  */
 class SvdRecommenderEvalFunction implements MultivariateFunction {
 
+  /**
+   * Returns a unique <code>long</code> from the two given integers. The same integers will always
+   * return the same value.
+   */
+  private static Long generateUniqueKey(int numFeatures, int numIterations) {
+    return (((long) numFeatures) << 32) | numIterations;
+  }
+
+  private final Map<Long, Double> cache;
   private final DataModel dataModel;
   private final DataModelBuilder dataModelBuilder;
   private final double evaluationPercentage;
@@ -81,6 +92,7 @@ class SvdRecommenderEvalFunction implements MultivariateFunction {
     trainingPercentage = configuration.getSpeed().getTrainingPercentage();
 
     evaluations = new ArrayList<>();
+    cache = new HashMap<>();
   }
 
   /**
@@ -94,6 +106,12 @@ class SvdRecommenderEvalFunction implements MultivariateFunction {
   public double value(double[] point) {
     int numFeatures = (int) Math.round(point[0]);
     int numIterations = (int) Math.round(point[1]);
+    Long cacheKey = generateUniqueKey(numFeatures, numIterations);
+
+    // check the cache
+    if (cache.containsKey(cacheKey)) {
+      return cache.get(cacheKey);
+    }
 
     // initialize the data for the evaluation
     SvdBasedRecommenderConfiguration configuration =
@@ -118,6 +136,8 @@ class SvdRecommenderEvalFunction implements MultivariateFunction {
       // if the minimum coverage is not reached, the worst value is returned
       result = Double.MAX_VALUE;
     }
+
+    cache.put(cacheKey, result);
 
     return result;
   }
