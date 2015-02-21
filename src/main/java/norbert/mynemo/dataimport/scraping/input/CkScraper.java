@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,10 +32,13 @@ import norbert.mynemo.dataimport.scraping.CkMapping;
 import norbert.mynemo.dataimport.scraping.CkRating;
 import norbert.mynemo.dataimport.scraping.CkRatingBuilder;
 
+import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
 
@@ -131,6 +135,8 @@ public class CkScraper {
     return Optional.of(span.child(0).attr(HREF_ATTRIBUTE_NAME));
   }
 
+  private final Logger LOGGER = LoggerFactory.getLogger(CkScraper.class);
+
   /** User agents used by the connection. */
   private final List<String> userAgents;
 
@@ -144,13 +150,32 @@ public class CkScraper {
   }
 
   /**
-   * Retrieves and returns a document from the given URL. A pause is done.
+   * Retrieves and returns a document from the given URL. A pause is done. If no response is
+   * received before the timeout, the document is asked again. Thus, this method can hang for a
+   * while.
    */
   private Document fetchDocument(final String url) throws IOException, InterruptedException {
 
     final String userAgent = userAgents.get(RANDOM.nextInt(userAgents.size()));
-    final Document result =
-        Jsoup.connect(url).userAgent(userAgent).referrer(REFERER).timeout(REQUEST_TIMEOUT).get();
+    Optional<Document> result = Optional.absent();
+
+    while (!result.isPresent()) {
+      try {
+        result =
+            Optional.of(Jsoup.connect(url).userAgent(userAgent).referrer(REFERER)
+                .timeout(REQUEST_TIMEOUT).get());
+      } catch (SocketTimeoutException e) {
+        LOGGER.warn("Socket timeout while scraping. Retry.", e);
+      } catch (HttpStatusException e) {
+        if (e.getStatusCode() == 503) {
+          LOGGER.warn("HTTP error 503 while scraping. Pause and retry.", e);
+          Thread.sleep(DELAY_BIG);
+        } else {
+          LOGGER.warn("HTTP error " + e.getStatusCode() + " while scraping. Stop.", e);
+          throw e;
+        }
+      }
+    }
 
     Thread.sleep(getRandomDelay());
 
@@ -158,7 +183,7 @@ public class CkScraper {
       Thread.sleep(DELAY_BIG);
     }
 
-    return result;
+    return result.get();
   }
 
   /**
