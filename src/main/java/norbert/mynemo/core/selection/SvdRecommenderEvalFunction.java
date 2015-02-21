@@ -51,7 +51,7 @@ import org.apache.mahout.cf.taste.model.DataModel;
  * {@link org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer
  * MultivariateOptimizer}.
  */
-class SvdRecommenderEvalFunction implements MultivariateFunction {
+class SvdRecommenderEvalFunction extends RecommenderEvalFunction implements MultivariateFunction {
 
   /**
    * Returns a unique <code>long</code> from the two given integers. The same integers will always
@@ -67,7 +67,6 @@ class SvdRecommenderEvalFunction implements MultivariateFunction {
   private final double evaluationPercentage;
   private final List<RecommenderEvaluation> evaluations;
   private final PersonnalRecommenderEvaluator evaluator;
-  private final double minimumCoverage;
   private final boolean reuseIsAllowed;
   private final double trainingPercentage;
   private final RecommenderType type;
@@ -77,11 +76,12 @@ class SvdRecommenderEvalFunction implements MultivariateFunction {
    */
   public SvdRecommenderEvalFunction(SelectorConfiguration configuration, RecommenderType type,
       double minimumCoverage) {
+    super(minimumCoverage);
+
     checkNotNull(configuration);
     checkArgument(type.getFamily() == RecommenderFamily.SVD_BASED);
 
     this.type = type;
-    this.minimumCoverage = minimumCoverage;
 
     // extract the necessary data from the configuration
     dataModel = configuration.getDataModel();
@@ -132,9 +132,11 @@ class SvdRecommenderEvalFunction implements MultivariateFunction {
     // save the evaluation and prepare the result
     evaluations.add(new RecommenderEvaluation(configuration, evaluator.getEvaluationReport()));
 
-    if (evaluator.getEvaluationReport().getCoverage() < minimumCoverage) {
-      // if the minimum coverage is not reached, the worst value is returned
-      result = Double.MAX_VALUE;
+    double coverage = evaluator.getEvaluationReport().getCoverage();
+    if (coverage < getMinimumCoverage()) {
+      // if the minimum coverage is not reached, the return value depends on the coverage instead
+      // of the number of neighbors
+      result = valueFromCoverage(coverage);
     }
 
     cache.put(cacheKey, result);

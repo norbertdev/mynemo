@@ -52,7 +52,8 @@ import org.apache.mahout.cf.taste.model.DataModel;
  * Because this class implements the {@link UnivariateFunction}, it can be used by a
  * {@link org.apache.commons.math3.optim.univariate.UnivariateOptimizer UnivariateOptimizer}.
  */
-class UserBasedRecommenderEvaluationFunction implements UnivariateFunction, MultivariateFunction {
+class UserBasedRecommenderEvaluationFunction extends RecommenderEvalFunction implements
+    UnivariateFunction, MultivariateFunction {
 
   private final Map<Integer, Double> cachedResults;
   private final DataModel dataModel;
@@ -60,7 +61,6 @@ class UserBasedRecommenderEvaluationFunction implements UnivariateFunction, Mult
   private final double evaluationPercentage;
   private final List<RecommenderEvaluation> evaluations;
   private final PersonnalRecommenderEvaluator evaluator;
-  private final double minimumCoverage;
   private final boolean reuseIsAllowed;
   private final double trainingPercentage;
   private final RecommenderType type;
@@ -70,13 +70,12 @@ class UserBasedRecommenderEvaluationFunction implements UnivariateFunction, Mult
    */
   public UserBasedRecommenderEvaluationFunction(SelectorConfiguration configuration,
       RecommenderType type, double minimumCoverage) {
+    super(minimumCoverage);
+
     checkNotNull(configuration);
     checkArgument(type.getFamily() == RecommenderFamily.USER_SIMILARITY_BASED);
-    checkArgument(0 <= minimumCoverage && minimumCoverage <= 1, "The minimum coverage must be"
-        + "between 0 and 1.");
 
     this.type = type;
-    this.minimumCoverage = minimumCoverage;
 
     // extract the necessary data from the configuration
     dataModel = configuration.getDataModel();
@@ -121,9 +120,11 @@ class UserBasedRecommenderEvaluationFunction implements UnivariateFunction, Mult
     // save the evaluation and prepare the result
     evaluations.add(new RecommenderEvaluation(configuration, evaluator.getEvaluationReport()));
 
-    if (evaluator.getEvaluationReport().getCoverage() < minimumCoverage) {
-      // if the minimum coverage is not reached, the worst value is returned
-      result = Double.MAX_VALUE;
+    double coverage = evaluator.getEvaluationReport().getCoverage();
+    if (coverage < getMinimumCoverage()) {
+      // if the minimum coverage is not reached, the return value depends on the coverage instead
+      // of the number of neighbors
+      result = valueFromCoverage(coverage);
     }
 
     cachedResults.put(numNeighbors, result);
