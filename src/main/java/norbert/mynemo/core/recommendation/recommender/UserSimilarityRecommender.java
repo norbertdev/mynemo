@@ -17,6 +17,7 @@
 package norbert.mynemo.core.recommendation.recommender;
 
 import norbert.mynemo.core.recommendation.configuration.UserBasedRecommenderConfiguration;
+import norbert.mynemo.core.recommendation.similarity.OriginalSpearmanCorrelationSimilarity;
 
 import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.common.Weighting;
@@ -95,6 +96,10 @@ public class UserSimilarityRecommender implements RecommenderBuilder {
 
       case USER_SIMILARITY_WITH_LOG_LIKELIHOOD:
         selectedSimilarity = new LogLikelihoodSimilarity(dataModel);
+        break;
+
+      case USER_SIMILARITY_WITH_ORIGINAL_SPEARMAN_CORRELATION:
+        selectedSimilarity = new OriginalSpearmanCorrelationSimilarity(dataModel);
         break;
 
       case USER_SIMILARITY_WITH_PEARSON_CORRELATION:

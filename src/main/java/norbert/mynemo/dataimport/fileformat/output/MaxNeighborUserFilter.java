@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 
+import norbert.mynemo.core.recommendation.similarity.OriginalSpearmanCorrelationSimilarity;
 import norbert.mynemo.dataimport.fileformat.MynemoRating;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -207,6 +208,10 @@ public class MaxNeighborUserFilter implements RatingWriter {
 
       case LOG_LIKELIHOOD:
         result = new LogLikelihoodSimilarity(dataModel);
+        break;
+
+      case ORIGINAL_SPEARMAN_CORRELATION:
+        result = new OriginalSpearmanCorrelationSimilarity(dataModel);
         break;
 
       case PEARSON_CORRELATION:
