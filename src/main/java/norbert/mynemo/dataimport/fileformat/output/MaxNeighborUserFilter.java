@@ -19,13 +19,14 @@ package norbert.mynemo.dataimport.fileformat.output;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.Lists.newArrayList;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Queue;
-import java.util.Set;
 
 import norbert.mynemo.core.recommendation.similarity.OriginalSpearmanCorrelationSimilarity;
 import norbert.mynemo.dataimport.fileformat.MynemoRating;
@@ -35,7 +36,6 @@ import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.common.Weighting;
 import org.apache.mahout.cf.taste.impl.common.FastByIDMap;
 import org.apache.mahout.cf.taste.impl.model.GenericDataModel;
-import org.apache.mahout.cf.taste.impl.model.GenericPreference;
 import org.apache.mahout.cf.taste.impl.model.GenericUserPreferenceArray;
 import org.apache.mahout.cf.taste.impl.similarity.CityBlockSimilarity;
 import org.apache.mahout.cf.taste.impl.similarity.EuclideanDistanceSimilarity;
@@ -49,7 +49,9 @@ import org.apache.mahout.cf.taste.model.PreferenceArray;
 import org.apache.mahout.cf.taste.similarity.UserSimilarity;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.collect.Multimap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 
@@ -116,8 +118,10 @@ public class MaxNeighborUserFilter implements RatingWriter {
     return HASH_FUNCTION.newHasher().putString(string, Charsets.UTF_8).hash().asLong();
   }
 
-  private final ArrayList<MynemoRating> allRatings;
-  private final Set<String> allUsers;
+  /**
+   * All ratings. A key is a user, its value is the user's ratings.
+   */
+  private final Multimap<String, MynemoRating> allRatings;
   private final int maxUsers;
   private final RatingWriter nextWriter;
   private final UserSimilarityType similarityType;
@@ -134,8 +138,7 @@ public class MaxNeighborUserFilter implements RatingWriter {
     this.similarityType = similarityType;
     this.targetUser = user;
 
-    allUsers = new HashSet<String>();
-    allRatings = new ArrayList<>();
+    allRatings = HashMultimap.create();
   }
 
   @Override
@@ -143,9 +146,9 @@ public class MaxNeighborUserFilter implements RatingWriter {
     try {
       HashSet<String> similarUsers = getMostSimilarUsers(createUserSimilarity());
 
-      for (MynemoRating rating : allRatings) {
-        if (similarUsers.contains(rating.getUser())) {
-          nextWriter.write(rating);
+      for (String user : allRatings.keySet()) {
+        if (similarUsers.contains(user)) {
+          writeAll(allRatings.get(user));
         }
       }
     } catch (TasteException e) {
@@ -153,8 +156,6 @@ public class MaxNeighborUserFilter implements RatingWriter {
     };
 
     allRatings.clear();
-    allRatings.trimToSize();
-    allUsers.clear();
 
     nextWriter.close();
   }
@@ -163,28 +164,26 @@ public class MaxNeighborUserFilter implements RatingWriter {
    * Creates a data model from the {@link #allRatings} field.
    */
   private DataModel createDataModel() {
-    FastByIDMap<PreferenceArray> map = new FastByIDMap<>(allUsers.size());
+    FastByIDMap<PreferenceArray> map = new FastByIDMap<>(allRatings.keySet().size());
 
-    for (MynemoRating rating : allRatings) {
-      long longUser = encode(rating.getUser());
-      long longMovie = Long.parseLong(rating.getMovie());
-      float floatValue = Float.parseFloat(rating.getValue());
-      if (!map.containsKey(longUser)) {
-        // add the new user and its preference
-        GenericUserPreferenceArray preferences = new GenericUserPreferenceArray(1);
-        preferences.set(0, new GenericPreference(longUser, longMovie, floatValue));
-        map.put(longUser, preferences);
-      } else {
-        // copy the preferences of the existing user, add its new preference
-        PreferenceArray oldPreferences = map.get(longUser);
-        PreferenceArray newPreferences =
-            new GenericUserPreferenceArray(oldPreferences.length() + 1);
-        for (int iOld = 0, iNew = 1; iOld < oldPreferences.length(); iOld++, iNew++) {
-          newPreferences.set(iNew, oldPreferences.get(iOld));
-        }
-        newPreferences.set(0, new GenericPreference(longUser, longMovie, floatValue));
-        map.put(longUser, newPreferences);
+    for (String user : allRatings.keySet()) {
+      long longUser = encode(user);
+      List<MynemoRating> ratings = newArrayList(allRatings.get(user));
+
+      PreferenceArray newPreferences = new GenericUserPreferenceArray(ratings.size());
+
+      // set the user
+      newPreferences.setUserID(0, longUser);
+
+      // add its preferences
+      for (int index = 0; index < newPreferences.length(); index++) {
+        MynemoRating rating = ratings.get(index);
+
+        newPreferences.setItemID(index, rating.getLongMovie());
+        newPreferences.setValue(index, rating.getFloatValue());
       }
+
+      map.put(longUser, newPreferences);
     }
 
     checkState(map.containsKey(encode(targetUser)), "The target user of the similarity must have"
@@ -262,7 +261,7 @@ public class MaxNeighborUserFilter implements RatingWriter {
     // cache the value of encoding to speed up
     long longUser = encode(targetUser);
 
-    for (String currentUser : allUsers) {
+    for (String currentUser : allRatings.keySet()) {
       mostSimilarUsers.add(new ComparableUser(currentUser, similarity.userSimilarity(longUser,
           encode(currentUser))));
     }
@@ -287,7 +286,15 @@ public class MaxNeighborUserFilter implements RatingWriter {
   @Override
   public void write(MynemoRating rating) throws IOException {
     checkNotNull(rating);
-    allRatings.add(rating);
-    allUsers.add(rating.getUser());
+    allRatings.put(rating.getUser(), rating);
+  }
+
+  /**
+   * Writes the given ratings into the next writer.
+   */
+  private void writeAll(Collection<MynemoRating> ratings) throws IOException {
+    for (MynemoRating rating : ratings) {
+      nextWriter.write(rating);
+    }
   }
 }

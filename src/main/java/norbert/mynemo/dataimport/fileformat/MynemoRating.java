@@ -165,6 +165,20 @@ public class MynemoRating {
     return movie.equals(r.movie) && user.equals(r.user) && value.equals(r.value);
   }
 
+  /**
+   * Returns the value as <code>float</code> data type.
+   */
+  public float getFloatValue() {
+    return Float.parseFloat(value);
+  }
+
+  /**
+   * Returns the movie id as <code>long</code> data type.
+   */
+  public long getLongMovie() {
+    return Long.parseLong(movie);
+  }
+
   public String getMovie() {
     return movie;
   }
