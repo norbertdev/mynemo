@@ -21,7 +21,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import norbert.mynemo.core.evaluation.PersonnalRecommenderEvaluator;
 import norbert.mynemo.core.recommendation.RecommenderFamily;
@@ -51,6 +53,7 @@ import org.apache.mahout.cf.taste.model.DataModel;
  */
 class UserBasedRecommenderEvaluationFunction implements UnivariateFunction {
 
+  private final Map<Integer, Double> cachedResults;
   private final DataModel dataModel;
   private final DataModelBuilder dataModelBuilder;
   private final double evaluationPercentage;
@@ -82,6 +85,7 @@ class UserBasedRecommenderEvaluationFunction implements UnivariateFunction {
     reuseIsAllowed = configuration.reuseIsAllowed();
     trainingPercentage = configuration.getSpeed().getTrainingPercentage();
 
+    cachedResults = new HashMap<>();
     evaluations = new ArrayList<>();
   }
 
@@ -90,11 +94,17 @@ class UserBasedRecommenderEvaluationFunction implements UnivariateFunction {
   }
 
   @Override
-  public double value(double numberOfUsers) {
+  public double value(double doubleNumNeighbors) {
+
+    int numNeighbors = (int) Math.round(doubleNumNeighbors);
+
+    if (cachedResults.containsKey(numNeighbors)) {
+      return cachedResults.get(numNeighbors);
+    }
+
     // initialize the data for the evaluation
     UserBasedRecommenderConfiguration configuration =
-        new UserBasedRecommenderConfiguration(type, (int) Math.round(numberOfUsers), dataModel,
-            reuseIsAllowed);
+        new UserBasedRecommenderConfiguration(type, numNeighbors, dataModel, reuseIsAllowed);
     UserSimilarityRecommender recommenderBuilder = new UserSimilarityRecommender(configuration);
 
     // run the evaluation
@@ -114,6 +124,8 @@ class UserBasedRecommenderEvaluationFunction implements UnivariateFunction {
       // if the minimum coverage is not reached, the worst value is returned
       result = Double.MAX_VALUE;
     }
+
+    cachedResults.put(numNeighbors, result);
 
     return result;
   }
