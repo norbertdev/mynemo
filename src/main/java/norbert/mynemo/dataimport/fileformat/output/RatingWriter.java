@@ -21,9 +21,14 @@ import java.io.IOException;
 
 import norbert.mynemo.dataimport.fileformat.MynemoRating;
 
+/**
+ * A writer writing Mynemo ratings.
+ */
 public interface RatingWriter extends Closeable {
   /**
-   * Writes the rating. Throws an {@link IOException} if the rating cannot be written.
+   * Writes the given rating.
+   *
+   * @throws IOException if the rating cannot be written
    */
   public void write(MynemoRating rating) throws IOException;
 }

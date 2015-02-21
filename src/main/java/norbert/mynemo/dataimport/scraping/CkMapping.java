@@ -32,16 +32,15 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 
 /**
- * This class represents a mapping between a CK movie id and a IMDb movie id.
+ * A CK mapping maps a CK movie id to an IMDb movie id.
  *
  * <p>
  * A list of mappings can be persisted in a tab-separated value file, where each line represents a
  * mapping. The columns are:
  * <ul>
- * <li>CK movie id</li>
- * <li>IMDb movie id</li>
+ * <li>CK movie id
+ * <li>IMDb movie id
  * </ul>
- * </p>
  */
 public class CkMapping {
 

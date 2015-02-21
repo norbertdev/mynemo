@@ -43,15 +43,13 @@ import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.eval.DataModelBuilder;
 import org.apache.mahout.cf.taste.eval.RecommenderBuilder;
 import org.apache.mahout.cf.taste.model.DataModel;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
 
 /**
  * This class selects the best recommender for a given user.
  */
-public class BestRecommenderSelector {
+public class RecommenderSelector {
   /**
    * Configuration option regarding the speed and the precision of the selection.
    *
@@ -66,12 +64,10 @@ public class BestRecommenderSelector {
    * <li><code>extremely_slow</code>: way more slower, provides an exact and deterministic (if
    * possible) result</li>
    * </ul>
-   * </p>
    *
    * <p>
    * The class is optimized for <code>trainingPercentage=1</code> and
    * <code>speed=EXTREMELY_SLOW</code>.
-   * </p>
    */
   public enum SpeedOption {
     EXTREMELY_SLOW(1, true), FAST(0.5, true), NORMAL(0.8, true), SLOW(0.9, true), VERY_FAST(0.7,
@@ -90,10 +86,11 @@ public class BestRecommenderSelector {
   }
 
   public static final double DEFAULT_EVALUATION_PERCENTAGE = 1;
-  public static final MetricType DEFAULT_METRIC = MetricType.MEAN_ABSOLUTE_ERROR;
+  public static final MetricType DEFAULT_METRIC = MetricType.ROOT_MEAN_SQUARED_ERROR;
+  public static final double DEFAULT_MINIMUM_COVERAGE = 0.5;
+  /** If false, prevent any optimization based on reusing data between evaluations. */
   private static final boolean DEFAULT_REUSE_STATE = true;
   public static final SpeedOption DEFAULT_SPEED = SpeedOption.EXTREMELY_SLOW;
-  private static final Logger LOGGER = LoggerFactory.getLogger(BestRecommenderSelector.class);
   /**
    * The significance level is the maximum allowed for a p-value to consider a difference relevant.
    * If this level is lowered, more evaluation will be considered similar. On the contrary, if this
@@ -115,32 +112,27 @@ public class BestRecommenderSelector {
     }
   }
 
-  private final DataModel dataModel;
-  private final double evaluationPercentage;
   private final PersonnalRecommenderEvaluator evaluator;
   private final MetricType metric;
-  private final SpeedOption speed;
+  private final SelectorConfiguration selectorConfiguration;
   private final SvdRecommenderSelector svdRecommenderSelector;
   private final long targetUser;
-  private final BestUserRecommenderSelector userRecommenderSelector;
+  private final UserRecommenderSelector userRecommenderSelector;
 
   /**
    * Builds a selector for the given user.
    */
-  public BestRecommenderSelector(DataModel model, long user) throws TasteException {
+  public RecommenderSelector(DataModel model, long user) throws TasteException {
     this(model, user, DEFAULT_METRIC, DEFAULT_SPEED, DEFAULT_EVALUATION_PERCENTAGE);
   }
 
   /**
    * Builds a selector for the given user. The selector will try to optimize the given metric.
    */
-  public BestRecommenderSelector(DataModel model, long user, MetricType metric, SpeedOption speed,
+  public RecommenderSelector(DataModel model, long user, MetricType metric, SpeedOption speed,
       double evaluationPercentage) throws TasteException {
     targetUser = user;
-    dataModel = model;
     this.metric = metric;
-    this.speed = speed;
-    this.evaluationPercentage = evaluationPercentage;
     evaluator = new PersonnalRecommenderEvaluator(targetUser, metric, speed.exhaustive);
 
     DataModelBuilder dataModelBuilder = null;
@@ -148,13 +140,15 @@ public class BestRecommenderSelector {
       // the evaluation percentage must be 1 because the model builder will use the whole data
       // model (except some missing preferences from the target user), not the given one by the
       // evaluator
-      dataModelBuilder = new PreferenceMaskerModelBuilder(dataModel, targetUser);
+      dataModelBuilder = new PreferenceMaskerModelBuilder(model, targetUser);
     }
 
-    SelectorConfiguration configuration =
-        new SelectorConfiguration(model, user, evaluator, evaluationPercentage, reuseIsAllowed(),
+    boolean reuseIsAllowed =
+        DEFAULT_REUSE_STATE && evaluationPercentage == 1 && speed.trainingPercentage == 1;
+    selectorConfiguration =
+        new SelectorConfiguration(model, user, evaluator, evaluationPercentage, reuseIsAllowed,
             speed, dataModelBuilder);
-    userRecommenderSelector = new BestUserRecommenderSelector(selectorConfiguration);
+    userRecommenderSelector = new UserRecommenderSelector(selectorConfiguration);
     svdRecommenderSelector = new SvdRecommenderSelector(selectorConfiguration);
   }
 
@@ -168,24 +162,16 @@ public class BestRecommenderSelector {
    * Runs the evaluator with the given builder, and generates an evaluation based on the given
    * configuration.
    */
-  private RecommenderEvaluation evaluate(RecommenderConfiguration configuration,
+  private RecommenderEvaluation evaluate(RecommenderConfiguration recommenderConfiguration,
       RecommenderBuilder recommenderBuilder) throws TasteException {
 
-    DataModelBuilder modelBuilder = null;
-    if (evaluationPercentage == 1) {
-      // the evaluation percentage must be 1 because the model builder will use the whole data
-      // model (except some missing preferences from the target user), not the given one by the
-      // evaluator
-      modelBuilder = new PreferenceMaskerModelBuilder(dataModel, targetUser);
-    }
+    DataModelBuilder modelBuilder = selectorConfiguration.getDataModelBuilder();
 
-    evaluator.evaluate(recommenderBuilder, modelBuilder, dataModel, speed.trainingPercentage,
-        evaluationPercentage);
+    evaluator.evaluate(recommenderBuilder, modelBuilder, selectorConfiguration.getDataModel(),
+        selectorConfiguration.getSpeed().trainingPercentage,
+        selectorConfiguration.getEvaluationPercentage());
 
-    LOGGER.info("An evaluation has been performed. {}", new RecommenderEvaluation(configuration,
-        evaluator.getEvaluationReport()));
-
-    return new RecommenderEvaluation(configuration, evaluator.getEvaluationReport());
+    return new RecommenderEvaluation(recommenderConfiguration, evaluator.getEvaluationReport());
   }
 
   /**
@@ -201,11 +187,11 @@ public class BestRecommenderSelector {
     for (RecommenderType current : recommenderTypes) {
       switch (current.getFamily()) {
         case BASIC:
-          result.addAll(evaluateBasic(current));
+          result.add(evaluateBasic(current));
           break;
 
         case ITEM_SIMILARITY_BASED:
-          result.addAll(evaluateItemBased(current));
+          result.add(evaluateItemBased(current));
           break;
 
         case SVD_BASED:
@@ -225,23 +211,27 @@ public class BestRecommenderSelector {
   }
 
   /**
-   * Evaluates the given recommender. The given recommender must be a basic one.
+   * Evaluates the given recommender. The given recommender must be part of the item-similarity
+   * based family.
    */
-  private Collection<RecommenderEvaluation> evaluateBasic(RecommenderType type)
-      throws TasteException {
+  private RecommenderEvaluation evaluateBasic(RecommenderType type) throws TasteException {
     checkArgument(type.getFamily() == RecommenderFamily.BASIC);
 
     BasicRecommenderConfiguration configuration = new BasicRecommenderConfiguration(type);
 
-    return newArrayList(evaluate(configuration, new BasicRecommender(configuration)));
+    return evaluate(configuration, new BasicRecommender(configuration));
   }
 
-  private Collection<RecommenderEvaluation> evaluateItemBased(RecommenderType recommenderType)
-      throws TasteException {
-    ItemBasedRecommenderConfiguration configuration =
-        new ItemBasedRecommenderConfiguration(recommenderType);
+  /**
+   * Evaluates the given recommender. The recommender type must be part of the item-similarity based
+   * family.
+   */
+  private RecommenderEvaluation evaluateItemBased(RecommenderType type) throws TasteException {
+    checkArgument(type.getFamily() == RecommenderFamily.ITEM_SIMILARITY_BASED);
 
-    return newArrayList(evaluate(configuration, new ItemSimilarityRecommender(configuration)));
+    ItemBasedRecommenderConfiguration configuration = new ItemBasedRecommenderConfiguration(type);
+
+    return evaluate(configuration, new ItemSimilarityRecommender(configuration));
   }
 
   /**
@@ -265,16 +255,12 @@ public class BestRecommenderSelector {
     evaluations.removeAll(rejectedEvaluations);
   }
 
-  private boolean reuseIsAllowed() {
-    return DEFAULT_REUSE_STATE && evaluationPercentage == 1 && speed.trainingPercentage == 1;
-  }
-
   /**
    * Returns the best recommender for the target user among available recommenders.
    */
   public Optional<RecommenderEvaluation> select() throws TasteException {
     return selectAmong(RecommenderType.getSpeedOrderedRecommenders(),
-        EvaluationComparator.DEFAULT_MINIMUM_COVERAGE);
+        RecommenderSelector.DEFAULT_MINIMUM_COVERAGE);
   }
 
   /**
@@ -285,7 +271,6 @@ public class BestRecommenderSelector {
    * <p>
    * The evaluations are compared with the given metric. The evaluations with a coverage lower than
    * the given one are ignored.
-   * </p>
    */
   public Optional<RecommenderEvaluation> selectAmong(List<RecommenderType> types,
       double minimumCoverage) throws TasteException {

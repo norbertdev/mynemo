@@ -29,6 +29,7 @@ import java.util.Set;
 
 import norbert.mynemo.dataimport.fileformat.MynemoRating;
 
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.common.Weighting;
 import org.apache.mahout.cf.taste.impl.common.FastByIDMap;
@@ -39,6 +40,7 @@ import org.apache.mahout.cf.taste.impl.similarity.CityBlockSimilarity;
 import org.apache.mahout.cf.taste.impl.similarity.EuclideanDistanceSimilarity;
 import org.apache.mahout.cf.taste.impl.similarity.LogLikelihoodSimilarity;
 import org.apache.mahout.cf.taste.impl.similarity.PearsonCorrelationSimilarity;
+import org.apache.mahout.cf.taste.impl.similarity.SpearmanCorrelationSimilarity;
 import org.apache.mahout.cf.taste.impl.similarity.TanimotoCoefficientSimilarity;
 import org.apache.mahout.cf.taste.impl.similarity.UncenteredCosineSimilarity;
 import org.apache.mahout.cf.taste.model.DataModel;
@@ -47,6 +49,7 @@ import org.apache.mahout.cf.taste.similarity.UserSimilarity;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 
 /**
@@ -55,8 +58,8 @@ import com.google.common.hash.Hashing;
  */
 public class MaxNeighborUserFilter implements RatingWriter {
   /**
-   * Comparable user such as u1 < u2 if u1 is more similar than u2. Two users are equal if their
-   * similarities are equal.
+   * Comparable user such as <code>u1 < u2</code> if <code>u1</code> is more similar than
+   * <code>u2</code>. Two users are equal if their similarities are equal.
    */
   private class ComparableUser implements Comparable<ComparableUser> {
 
@@ -96,37 +99,36 @@ public class MaxNeighborUserFilter implements RatingWriter {
 
     @Override
     public int hashCode() {
-      long longBits = Double.doubleToLongBits(similarity);
-      return (int) (longBits ^ (longBits >>> 32));
+      return new HashCodeBuilder().append(similarity).toHashCode();
     }
   }
 
+  private static final HashFunction HASH_FUNCTION = Hashing.goodFastHash(64);
+
   /**
-   * Returns a long hash from the given string.
+   * Returns a <code>long</code> hash from the given string.
    *
    * @param string a string
    * @return the hash of the string
    */
   private static long encode(String string) {
-    return Hashing.murmur3_128().newHasher().putString(string, Charsets.UTF_8).hash().asLong();
+    return HASH_FUNCTION.newHasher().putString(string, Charsets.UTF_8).hash().asLong();
   }
 
   private final List<MynemoRating> allRatings;
   private final Set<String> allUsers;
-  private final int maximumUsers;
-
+  private final int maxUsers;
   private final RatingWriter nextWriter;
   private final UserSimilarityType similarityType;
-
   private final String targetUser;
 
-  public MaxNeighborUserFilter(RatingWriter nextWriter, String user, int maximumUsers,
+  public MaxNeighborUserFilter(RatingWriter nextWriter, String user, int maxUsers,
       UserSimilarityType similarityType) {
     checkNotNull(nextWriter);
     checkNotNull(user);
-    checkArgument(0 < maximumUsers, "The maximum number of users must be at least 1.");
+    checkArgument(1 <= maxUsers, "The maximum number of users must be at least 1.");
 
-    this.maximumUsers = maximumUsers;
+    this.maxUsers = maxUsers;
     this.nextWriter = nextWriter;
     this.similarityType = similarityType;
     this.targetUser = user;
@@ -211,6 +213,10 @@ public class MaxNeighborUserFilter implements RatingWriter {
         result = new PearsonCorrelationSimilarity(dataModel, Weighting.UNWEIGHTED);
         break;
 
+      case SPEARMAN_CORRELATION:
+        result = new SpearmanCorrelationSimilarity(dataModel);
+        break;
+
       case TANIMOTO_COEFFICIENT:
         result = new TanimotoCoefficientSimilarity(dataModel);
         break;
@@ -243,7 +249,7 @@ public class MaxNeighborUserFilter implements RatingWriter {
    * field.
    */
   private HashSet<String> getMostSimilarUsers(UserSimilarity similarity) throws TasteException {
-    Queue<ComparableUser> mostSimilarUsers = MinMaxPriorityQueue.maximumSize(maximumUsers).create();
+    Queue<ComparableUser> mostSimilarUsers = MinMaxPriorityQueue.maximumSize(maxUsers).create();
     // cache the value of encoding to speed up
     long longUser = encode(targetUser);
 

@@ -16,10 +16,15 @@
  */
 package norbert.mynemo.core.selection;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import norbert.mynemo.core.evaluation.PersonnalRecommenderEvaluator;
+import norbert.mynemo.core.recommendation.RecommenderFamily;
 import norbert.mynemo.core.recommendation.RecommenderType;
 import norbert.mynemo.core.recommendation.configuration.SvdBasedRecommenderConfiguration;
 import norbert.mynemo.core.recommendation.recommender.SvdBasedRecommender;
@@ -30,29 +35,26 @@ import org.apache.mahout.cf.taste.eval.DataModelBuilder;
 import org.apache.mahout.cf.taste.model.DataModel;
 
 /**
- * This function renders optimizable the number of features and the number of iterations for a SVD
- * based recommender. Indeed, the {@link #value(double[])} method takes the two numbers as
- * parameter, and returns the value of a metric produced by an evaluator for these numbers. A list
- * of all evaluations performed are kept, and can be accessed via the {@link #getEvaluations()}
- * method.
+ * This function renders optimizable the numbers of features and iterations for a SVD based
+ * recommender. Indeed, the {@link #value(double[])} method takes the two numbers as parameter, and
+ * returns the value of a metric produced by an evaluator for these numbers. A list of all
+ * evaluations performed are kept, and can be accessed via the {@link #getEvaluations()} method.
  *
  * <p>
  * A minimum coverage is taken in account. Indeed, an evaluation with a coverage below the given
- * minimum coverage produces the value {code Double.MAX_VALUE}.
- * </p>
+ * minimum coverage produces a worst value than an evaluation with an acceptable coverage.
  *
  * <p>
  * Because this class implements the {@link MultivariateFunction}, it can be used by a
  * {@link org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer
  * MultivariateOptimizer}.
- * </p>
  */
 class SvdRecommenderEvalFunction implements MultivariateFunction {
 
   private final DataModel dataModel;
   private final DataModelBuilder dataModelBuilder;
   private final double evaluationPercentage;
-  private final Collection<RecommenderEvaluation> evaluations;
+  private final List<RecommenderEvaluation> evaluations;
   private final PersonnalRecommenderEvaluator evaluator;
   private final double minimumCoverage;
   private final boolean reuseIsAllowed;
@@ -64,6 +66,8 @@ class SvdRecommenderEvalFunction implements MultivariateFunction {
    */
   public SvdRecommenderEvalFunction(SelectorConfiguration configuration, RecommenderType type,
       double minimumCoverage) {
+    checkNotNull(configuration);
+    checkArgument(type.getFamily() == RecommenderFamily.SVD_BASED);
 
     this.type = type;
     this.minimumCoverage = minimumCoverage;
@@ -80,7 +84,7 @@ class SvdRecommenderEvalFunction implements MultivariateFunction {
   }
 
   /**
-   * Returns all evaluations perfomed.
+   * Returns all evaluations performed.
    */
   public Collection<RecommenderEvaluation> getEvaluations() {
     return evaluations;
@@ -88,9 +92,10 @@ class SvdRecommenderEvalFunction implements MultivariateFunction {
 
   @Override
   public double value(double[] point) {
-    // initialize the data for the evaluation
     int numFeatures = (int) Math.round(point[0]);
     int numIterations = (int) Math.round(point[1]);
+
+    // initialize the data for the evaluation
     SvdBasedRecommenderConfiguration configuration =
         new SvdBasedRecommenderConfiguration(type, numFeatures, numIterations, dataModel,
             reuseIsAllowed);

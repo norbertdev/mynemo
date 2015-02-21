@@ -19,7 +19,7 @@ package norbert.mynemo.dataimport.fileformat.input;
 import norbert.mynemo.dataimport.fileformat.MynemoRating;
 
 /**
- * This class represents a file containing ratings.
+ * This class represents a importer that can parse a file containing ratings.
  */
-public interface ImportableRatingFile extends Iterable<MynemoRating> {
+public interface RatingImporter extends Iterable<MynemoRating> {
 }

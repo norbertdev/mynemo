@@ -21,7 +21,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -33,17 +32,17 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.mahout.cf.taste.common.TasteException;
 
 /**
- * This class represents a Mynemo rating.
+ * A Mynemo rating encapsulates the user that give the rating, the rated movie and the value of the
+ * rating.
  *
  * <p>
  * A list of ratings can be persisted in a tab-separated value file, where each line represents a
  * rating. The columns are:
  * <ul>
- * <li>user id</li>
- * <li>movie id from IMDb</li>
- * <li>value of the rating</li>
+ * <li>user id
+ * <li>IMDb id of the movie
+ * <li>value of the rating
  * </ul>
- * </p>
  */
 public class MynemoRating {
   /**
@@ -122,8 +121,6 @@ public class MynemoRating {
    *
    * @param filepath file to read
    * @return a new parser
-   * @throws FileNotFoundException
-   * @throws IOException
    */
   public static CSVParser createParser(String filepath) throws IOException {
     return new CSVParser(new BufferedReader(new FileReader(filepath)), CSV_FORMAT);
@@ -165,11 +162,7 @@ public class MynemoRating {
   private final String value;
 
   /**
-   * Creates a rating given by the user to the movie.
-   *
-   * @param user user that have rated
-   * @param movie movie rated
-   * @param value value of the rating
+   * Creates a rating with the given value by the given user to the given movie.
    */
   public MynemoRating(String user, String movie, String value) {
     checkArgument(user != null, "The user must not be null.");

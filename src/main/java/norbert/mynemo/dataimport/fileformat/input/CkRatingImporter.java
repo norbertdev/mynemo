@@ -35,7 +35,7 @@ import com.google.common.collect.UnmodifiableIterator;
  * a file and converts them into Mynemo ratings. Ratings of movies are converted from CK id to IMDb
  * ids. Ratings of movies without corresponding IMDb id are ignored.
  */
-public class CkRatingImporter implements ImportableRatingFile {
+public class CkRatingImporter implements RatingImporter {
   /**
    * This iterator converts each given rating from the CK rating file into a Mynemo rating.
    */

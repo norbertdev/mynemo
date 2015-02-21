@@ -46,7 +46,6 @@ public class SvdBasedRecommenderConfiguration implements RecommenderConfiguratio
    * {@link UserSimilarityRecommender#buildRecommender(DataModel)} method. Generally speaking, the
    * factorization can be reuse only when the <code>evaluationPercentage</code> given to a
    * subclasses of {@link RecommenderEvaluator} is <code>1</code>.
-   * </p>
    *
    * @param type type of the recommender
    * @param numberOfFeatures number of features
@@ -70,8 +69,10 @@ public class SvdBasedRecommenderConfiguration implements RecommenderConfiguratio
   }
 
   /**
-   * Returns the data model. Throws an exception if the {@link #allowCachedFactorizationReuse()}
-   * method returns <code>false</code>.
+   * Returns the data model.
+   *
+   * @throws IllegalStateException if the {@link #allowCachedFactorizationReuse()} method returns
+   *         <code>false</code>
    */
   public DataModel getDataModel() {
     checkState(allowCachedFactorizationReuse());

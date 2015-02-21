@@ -38,7 +38,7 @@ import norbert.mynemo.dataimport.scraping.output.CkRatingWriter;
 import com.google.common.base.Optional;
 
 /**
- * This scraper can retrieve ratings from the a web site.
+ * This scraper retrieves ratings and mappings from the CK web site.
  */
 public class Scraper {
 
@@ -51,8 +51,8 @@ public class Scraper {
   public Scraper(String outputMappingFilepath, String outputRatingFilepath, String[] inputFilepaths)
       throws IOException {
     // check
-    checkArgument(!new File(outputMappingFilepath).exists(),
-        "The given output file for movies must" + " not exist.");
+    checkArgument(!new File(outputMappingFilepath).exists(), "The given output file for movies"
+        + " must not exist.");
     checkArgument(!new File(outputRatingFilepath).exists(), "The given output file for ratings"
         + " must not exist.");
     for (String filepath : inputFilepaths) {
@@ -104,13 +104,14 @@ public class Scraper {
    * {@link #loadedRatings} field.
    */
   private List<String> getUserWithoutRating() {
-    List<String> result = new ArrayList<>();
     Set<String> usersWithRatings = new HashSet<>();
 
     // put the users with ratings into a hash set for speed improvement
     for (CkRating rating : loadedRatings) {
       usersWithRatings.add(rating.getUser());
     }
+
+    List<String> result = new ArrayList<>();
 
     // test each user
     for (String user : loadedUsers) {
@@ -164,22 +165,25 @@ public class Scraper {
     }
   }
 
+  /**
+   * Scrapes the user ratings and the movie mappings from the CK web site.
+   */
   public void scrape() throws IOException, InterruptedException {
-    // scrape the ratings from the users without ratings
-    try (CkRatingWriter ratingWriter = new CkRatingWriter(outputRatingFilepath)) {
-      ratingWriter.writeAll(loadedRatings);
-      ratingWriter.flush();
-      for (String user : getUserWithoutRating()) {
-        ratingWriter.writeAll(CkScraper.scrapeRatingsOfUser(user));
-        ratingWriter.flush();
-      }
-    }
+
+    scrapeRatings();
 
     // reload the ratings to include the newly scraped ratings
     loadedRatings.clear();
     loadFile(outputRatingFilepath);
 
     // scrape the movies without imdb id
+    scrapeMappings();
+  }
+
+  /**
+   * Scrapes the movies without IMDb id to get the mapping.
+   */
+  private void scrapeMappings() throws IOException, InterruptedException {
     try (CkMappingWriter movieMappingWriter = new CkMappingWriter(outputMappingFilepath)) {
       movieMappingWriter.writeAll(loadedMappings);
       movieMappingWriter.flush();
@@ -189,6 +193,20 @@ public class Scraper {
           movieMappingWriter.write(mapping.get());
           movieMappingWriter.flush();
         }
+      }
+    }
+  }
+
+  /**
+   * Scrapes the ratings from the users without ratings.
+   */
+  private void scrapeRatings() throws IOException, InterruptedException {
+    try (CkRatingWriter ratingWriter = new CkRatingWriter(outputRatingFilepath)) {
+      ratingWriter.writeAll(loadedRatings);
+      ratingWriter.flush();
+      for (String user : getUserWithoutRating()) {
+        ratingWriter.writeAll(CkScraper.scrapeRatingsOfUser(user));
+        ratingWriter.flush();
       }
     }
   }

@@ -27,10 +27,9 @@ import norbert.mynemo.core.evaluation.MetricType;
 import norbert.mynemo.core.recommendation.RecommenderType;
 import norbert.mynemo.core.recommendation.configuration.SvdBasedRecommenderConfiguration;
 import norbert.mynemo.core.recommendation.configuration.UserBasedRecommenderConfiguration;
-import norbert.mynemo.core.selection.BestRecommenderSelector;
-import norbert.mynemo.core.selection.BestRecommenderSelector.SpeedOption;
-import norbert.mynemo.core.selection.EvaluationComparator;
 import norbert.mynemo.core.selection.RecommenderEvaluation;
+import norbert.mynemo.core.selection.RecommenderSelector;
+import norbert.mynemo.core.selection.RecommenderSelector.SpeedOption;
 import norbert.mynemo.dataimport.StringUserDataModel;
 
 import org.apache.commons.cli.BasicParser;
@@ -50,6 +49,7 @@ import com.google.common.base.Optional;
  * This parser handles a command line to select the best suited algorithm for a user.
  */
 public class SelectCommandParser {
+
   // algorithms
   private static final String ALGORITHMS_ARG_NAME = "algos";
   private static final char ALGORITHMS_CHAR_OPTION = 'a';
@@ -69,7 +69,7 @@ public class SelectCommandParser {
       + " evaluations. A recommender may be unable to provide a recommendation for an item. The"
       + " coverage reflects the ratio between the number of provided recommendation for the"
       + " already rated items and the number of already rated item. The coverage must be between"
-      + " 0 and 1. The default value is " + EvaluationComparator.DEFAULT_MINIMUM_COVERAGE + ".";
+      + " 0 and 1. The default value is " + RecommenderSelector.DEFAULT_MINIMUM_COVERAGE + ".";
   private static final String COVERAGE_LONG_OPTION = "coverage";
 
   // data model
@@ -80,8 +80,8 @@ public class SelectCommandParser {
 
   private static final List<RecommenderType> DEFAULT_ALGORITHM_LIST = RecommenderType
       .getFastRecommenders();
-  private static final MetricType DEFAULT_METRIC = MetricType.MEAN_ABSOLUTE_ERROR;
-  private static final SpeedOption DEFAULT_SPEED = SpeedOption.EXTREMELY_SLOW;
+  private static final MetricType DEFAULT_METRIC = RecommenderSelector.DEFAULT_METRIC;
+  private static final SpeedOption DEFAULT_SPEED = RecommenderSelector.DEFAULT_SPEED;
   private static final double FORCED_EVALUATION_PERCENTAGE = 1;
 
   // metric
@@ -253,7 +253,7 @@ public class SelectCommandParser {
    */
   private static double parseCoverage(String coverageValue) {
     if (coverageValue == null) {
-      return EvaluationComparator.DEFAULT_MINIMUM_COVERAGE;
+      return RecommenderSelector.DEFAULT_MINIMUM_COVERAGE;
     }
 
     double result;
@@ -332,7 +332,7 @@ public class SelectCommandParser {
     long result;
 
     try {
-      result = StringUserDataModel.userNameToLong(user);
+      result = StringUserDataModel.convertUsername(user);
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Error: the provided user is not a valid id.", e);
     }
@@ -345,6 +345,7 @@ public class SelectCommandParser {
     if (!optionalSelection.isPresent()) {
       System.out.println("Unable to find a algorithm. The minimum coverage value may be too"
           + " high.");
+      return;
     }
 
     RecommenderEvaluation selection = optionalSelection.get();
@@ -424,8 +425,8 @@ public class SelectCommandParser {
   private static Optional<RecommenderEvaluation> select(DataModel dataModel, Long user,
       List<RecommenderType> algorithms, MetricType metric, SpeedOption speed, double coverage)
       throws TasteException {
-    BestRecommenderSelector selection =
-        new BestRecommenderSelector(dataModel, user, metric, speed, FORCED_EVALUATION_PERCENTAGE);
+    RecommenderSelector selection =
+        new RecommenderSelector(dataModel, user, metric, speed, FORCED_EVALUATION_PERCENTAGE);
 
     return selection.selectAmong(algorithms, coverage);
   }

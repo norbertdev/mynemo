@@ -18,53 +18,50 @@ package norbert.mynemo.dataimport.fileformat.output;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.collect.Lists.newArrayList;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.HashSet;
+import java.util.Set;
 
 import norbert.mynemo.dataimport.fileformat.MynemoRating;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+
 /**
- * <p>
- * This filter writes only the ratings on the movies that have at least a given number of ratings.
- * </p>
- *
- * <p>
- * The ratings are kept in memory until the {@link #close()} method is called. Then, the ratings are
- * written to the next writer.
- * </p>
+ * This filter writes only the ratings of the movies that have at least a given number of ratings.
  */
 public class MinRatingByMovieFilter implements RatingWriter {
 
-  /**
-   * All ratings by movie. Every rating that is given to the {@link #write(MynemoRating) write}
-   * method is kept in this map. The key is the movie of the rating.
-   */
-  private final Map<String, Collection<MynemoRating>> allRatings;
-  private final int minRatingByMovie;
+  private final int minRatingsByMovie;
   private final RatingWriter nextWriter;
+  /**
+   * Unwritten ratings by movie. Every rating given to the {@link #write(MynemoRating) write} method
+   * is kept in this map until the minimum number is reached.
+   */
+  private final Multimap<String, MynemoRating> unwrittenRatings;
+  /** A rating for a movie in this set can be written to the next writer. */
+  private final Set<String> writableMovies;
 
-  public MinRatingByMovieFilter(RatingWriter nextWriter, int minRatingByMovie) {
-    checkArgument(nextWriter != null, "The next writer must not be null.");
-    checkArgument(0 < minRatingByMovie, "The minimum rating movie must be at least 1.");
+  /**
+   * Creates a writer that writes into the given writer. The given minimum must be at least 1.
+   */
+  public MinRatingByMovieFilter(RatingWriter nextWriter, int minRatingsByMovie) {
+    checkNotNull(nextWriter);
+    checkArgument(1 <= minRatingsByMovie, "The minimum rating by movie must be at least 1.");
 
-    this.minRatingByMovie = minRatingByMovie;
+    this.minRatingsByMovie = minRatingsByMovie;
     this.nextWriter = nextWriter;
-    allRatings = new HashMap<>();
+
+    unwrittenRatings = HashMultimap.create();
+    writableMovies = new HashSet<>();
   }
 
   @Override
   public void close() throws IOException {
-    for (Entry<String, Collection<MynemoRating>> entry : allRatings.entrySet()) {
-      Collection<MynemoRating> ratings = entry.getValue();
-      if (minRatingByMovie <= ratings.size()) {
-        writeAll(ratings);
-      }
-    }
+    unwrittenRatings.clear();
+    writableMovies.clear();
 
     nextWriter.close();
   }
@@ -75,16 +72,25 @@ public class MinRatingByMovieFilter implements RatingWriter {
 
     String movie = rating.getMovie();
 
-    // keep the rating
-    if (!allRatings.containsKey(movie)) {
-      allRatings.put(movie, newArrayList(rating));
-    } else {
-      allRatings.get(movie).add(rating);
+    // write and return if possible
+    if (writableMovies.contains(movie)) {
+      nextWriter.write(rating);
+      return;
+    }
+
+    unwrittenRatings.put(movie, rating);
+    final Collection<MynemoRating> movieRatings = unwrittenRatings.get(movie);
+
+    // check if the movie has become writable
+    if (minRatingsByMovie <= movieRatings.size()) {
+      writableMovies.add(movie);
+      writeAll(movieRatings);
+      unwrittenRatings.removeAll(movie);
     }
   }
 
   /**
-   * Writes into the next writer the given ratings.
+   * Writes the given ratings into the next writer.
    */
   private void writeAll(Collection<MynemoRating> ratings) throws IOException {
     for (MynemoRating rating : ratings) {

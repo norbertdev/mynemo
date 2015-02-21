@@ -16,6 +16,14 @@
  */
 package norbert.mynemo.core.recommendation;
 
+/**
+ * A family of recommenders regroups recommender that use the same kind of configuration parameter.
+ * For example:
+ * <ul>
+ * <li>the basic recommenders do not use any configuration parameter
+ * <li>the user-similarity based recommender is parameterized by the maximum number of neighbors
+ * </ul>
+ */
 public enum RecommenderFamily {
   BASIC, ITEM_SIMILARITY_BASED, SVD_BASED, USER_SIMILARITY_BASED;
 }

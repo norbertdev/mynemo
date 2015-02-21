@@ -33,6 +33,10 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+/**
+ * This loader retrieves from a "TCI" file the user ids. A TCI file is an HTML page downloaded from
+ * the CK web site.
+ */
 public class TciPageLoader {
   private static final String A_TAG_NAME = "a";
   private static final String HREF_ATTRIBUTE_NAME = "href";
@@ -98,6 +102,9 @@ public class TciPageLoader {
     return result;
   }
 
+  /**
+   * Returns the user ids found in the given file.
+   */
   public static Collection<? extends String> getUsers(String filepath) throws IOException {
     checkArgument(new File(filepath).exists(), "The file must exists.");
 

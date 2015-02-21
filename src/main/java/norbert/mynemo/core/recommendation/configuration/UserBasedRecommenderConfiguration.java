@@ -46,7 +46,6 @@ public class UserBasedRecommenderConfiguration implements RecommenderConfigurati
    * {@link UserSimilarityRecommender#buildRecommender(DataModel)} method. Generally speaking, the
    * similarity can be reuse only when the <code>evaluationPercentage</code> given to a subclasses
    * of {@link RecommenderEvaluator} is <code>1</code>.
-   * </p>
    *
    * @param type the type of similarity
    * @param neighborNumber the maximum number of neighbors for a user
@@ -73,8 +72,10 @@ public class UserBasedRecommenderConfiguration implements RecommenderConfigurati
   }
 
   /**
-   * Returns the data model. Throws an exception if the {@link #allowCachedSimilarityReuse()} method
-   * returns <code>false</code>.
+   * Returns the data model.
+   *
+   * @throws IllegalStateException if the {@link #allowCachedSimilarityReuse()} method returns
+   *         <code>false</code>
    */
   public DataModel getDataModel() {
     checkState(allowCachedSimilarityReuse());

@@ -23,14 +23,11 @@ import java.util.Comparator;
 import norbert.mynemo.core.evaluation.MetricType;
 
 /**
- * This class provides a comparison between recommender evaluations. An evaluation A is lesser than
- * another evaluation B if its metric value is lesser than the metric value of B. The metric to
- * compare is selected via the constructor.
+ * This comparator compares evaluations of recommenders. An evaluation A is lesser than another
+ * evaluation B if its metric value is lesser than the metric value of B. The metric to compare is
+ * selected via the constructor.
  */
 public class EvaluationComparator implements Comparator<RecommenderEvaluation> {
-
-  public static final MetricType DEFAULT_METRIC = MetricType.ROOT_MEAN_SQUARED_ERROR;
-  public static final double DEFAULT_MINIMUM_COVERAGE = 0.05;
 
   private final MetricType metric;
 

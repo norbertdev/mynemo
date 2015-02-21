@@ -54,7 +54,6 @@ public class UserSimilarityRecommender implements RecommenderBuilder {
    *
    * <p>
    * Whereas the similarity matrix can be reuse, the neighborhood is never reused.
-   * </p>
    */
   public UserSimilarityRecommender(UserBasedRecommenderConfiguration configuration) {
     this.configuration = configuration;

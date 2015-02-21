@@ -19,7 +19,7 @@ package norbert.mynemo.core.evaluation;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
- * This class provides a simple timer that deals with seconds, not milliseconds.
+ * This timer deals with seconds, not milliseconds.
  */
 public class Timer {
   public static Timer createStartedTimer() {

@@ -35,6 +35,7 @@ import org.apache.mahout.cf.taste.common.TasteException;
  * This parser handles a command line to scrape a web site in order to get new ratings.
  */
 public class ScrapeCommandParser {
+
   private static final String COMMAND_SYNTAX = "scrape  --out-ratings <file>  --out-movies <file>"
       + "  --in <file> [<file>…]";
 
@@ -130,7 +131,7 @@ public class ScrapeCommandParser {
       ScrapeCommandParser.printUsage();
     } catch (Exception e) {
       System.err.println(e.getMessage());
-      ScrapeCommandParser.printUsage();
+      e.printStackTrace();
     }
   }
 

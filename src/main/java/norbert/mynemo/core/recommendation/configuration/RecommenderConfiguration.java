@@ -18,6 +18,9 @@ package norbert.mynemo.core.recommendation.configuration;
 
 import norbert.mynemo.core.recommendation.RecommenderType;
 
+/**
+ * A configuration encapsulates data for a recommender builder.
+ */
 public interface RecommenderConfiguration {
   public RecommenderType getType();
 }

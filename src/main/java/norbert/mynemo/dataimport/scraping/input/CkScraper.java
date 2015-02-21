@@ -36,14 +36,15 @@ import org.jsoup.select.Elements;
 import com.google.common.base.Optional;
 
 /**
- * This scraper use the CK web site to provides the ratings of a given user and the id mapping of a
+ * This scraper uses the CK web site to provide the ratings of a given user and the id mapping of a
  * given movie.
  */
 public class CkScraper {
   private static final String CK_PART1 = "http://www.criti";
   private static final String CK_PART2 = "cker.com/";
-  private static final int DELAY_DELTA = 5 * 1000;
-  private static final int DELAY_MINIMUM = 1 * 1000;
+  private static final int DELAY_DELTA = 1 * 1000;
+  /** Time in millisecond. Minimum pause duration between two requests. */
+  private static final int DELAY_MINIMUM = 10 * 1000;
   private static final String HREF_ATTRIBUTE_NAME = "href";
   private static final String IMDB_ID_PREFIX = "tt";
   private static final String IMDB_LOCATOR = "fi_info_imdb";
@@ -55,20 +56,22 @@ public class CkScraper {
   private static final String RATING_URL_PREFIX = CK_PART1 + CK_PART2 + "?fl&view=oth&user=";
   private static final String RATING_URL_SUFFIX = "&filter=&page=1";
   /** Duration between two requests. */
-  private static final int REQUEST_TIMEOUT = 10 * 1000;
+  private static final int REQUEST_TIMEOUT = 30 * 1000;
   private static final Pattern SLASH_SPLITTER_PATTERN = Pattern.compile(MAPPING_URL_SUFFIX);
   private static final String USER_AGENT =
       "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:22.0) Gecko/20100101 Firefox/22.0";
 
   /**
    * Returns a number of milliseconds M such as: {@link #DELAY_MINIMUM} < M < (
-   * {@link #DELAY_MINIMUM} +{@link #DELAY_DELTA})
+   * {@link #DELAY_MINIMUM} + {@link #DELAY_DELTA})
    */
   private static long getRandomDelay() {
-    int result = RANDOM.nextInt(DELAY_DELTA) + DELAY_MINIMUM;
-    return result;
+    return RANDOM.nextInt(DELAY_DELTA) + DELAY_MINIMUM;
   }
 
+  /**
+   * Returns the list of ratings found in the given document.
+   */
   private static List<CkRatingBuilder> parseRatings(Document ratingDocument) {
     List<CkRatingBuilder> result = new ArrayList<>();
 
@@ -83,6 +86,9 @@ public class CkScraper {
     return result;
   }
 
+  /**
+   * Returns the URL of the next page. If there is no next page, return nothing.
+   */
   private static Optional<String> parseUserRatingNextPage(Document ratingPage) {
     Elements currentPage = ratingPage.getElementsByClass(NEXT_PAGE_USERRATING_LOCATOR);
     Element span = currentPage.first().nextElementSibling();
@@ -129,7 +135,6 @@ public class CkScraper {
    */
   public static List<CkRating> scrapeRatingsOfUser(String user) throws IOException,
       InterruptedException {
-    List<CkRating> result = new ArrayList<>();
     List<CkRatingBuilder> ratingBuilder = new ArrayList<>();
 
     Optional<String> nextPageUrl = Optional.of(RATING_URL_PREFIX + user + RATING_URL_SUFFIX);
@@ -141,6 +146,8 @@ public class CkScraper {
       Thread.sleep(getRandomDelay());
     } while (nextPageUrl.isPresent());
 
+    // create the CK ratings
+    List<CkRating> result = new ArrayList<>();
     for (CkRatingBuilder builder : ratingBuilder) {
       result.add(builder.createRating(user));
     }

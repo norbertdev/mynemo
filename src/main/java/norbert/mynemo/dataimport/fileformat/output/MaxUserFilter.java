@@ -27,26 +27,26 @@ import norbert.mynemo.dataimport.fileformat.MynemoRating;
 
 /**
  * This filter writes only the ratings of a given number of users. While the number of maximum users
- * is not reach, all ratings are written to the next writer. As soon as the number of maximum
- * different users is reached:
+ * is not reached, all ratings are written to the next writer. As soon as the maximum is reached:
  * <ul>
- * <li>a rating of an unknown user is not written</li>
- * <li>a rating of a known user is written</li>
+ * <li>a rating of an unknown user is not written
+ * <li>a rating of a known user is written
  * </ul>
  */
 public class MaxUserFilter implements RatingWriter {
 
-  private final Set<String> knownUsers;
-  private final int maximumUsers;
+  private final int maxUsers;
   private final RatingWriter nextWriter;
+  private final Set<String> writableUsers;
 
-  public MaxUserFilter(RatingWriter nextWriter, int maximumUsers) {
+  public MaxUserFilter(RatingWriter nextWriter, int maxUsers) {
     checkNotNull(nextWriter);
-    checkArgument(0 < maximumUsers, "The maximum number of users must be at least 1.");
+    checkArgument(1 <= maxUsers, "The maximum number of users must be at least 1.");
 
-    this.maximumUsers = maximumUsers;
+    this.maxUsers = maxUsers;
     this.nextWriter = nextWriter;
-    knownUsers = new HashSet<>();
+
+    writableUsers = new HashSet<>();
   }
 
   @Override
@@ -60,11 +60,11 @@ public class MaxUserFilter implements RatingWriter {
 
     String user = rating.getUser();
 
-    if (knownUsers.size() < maximumUsers) {
-      knownUsers.add(user);
+    if (writableUsers.size() < maxUsers) {
+      writableUsers.add(user);
     }
 
-    if (knownUsers.contains(user)) {
+    if (writableUsers.contains(user)) {
       nextWriter.write(rating);
     }
   }

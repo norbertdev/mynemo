@@ -42,7 +42,6 @@ import org.apache.mahout.cf.taste.model.PreferenceArray;
  * used. Thus, if this class is given to an instance of
  * {@link RecommenderEvaluator#evaluate(org.apache.mahout.cf.taste.eval.RecommenderBuilder, DataModelBuilder, DataModel, double, double)
  * RecommenderEvaluator.evaluate(…)} , the <code>evaluationPercentage</code> must be 1.
- * </p>
  */
 public class PreferenceMaskerModelBuilder implements DataModelBuilder, DataModel {
   private static final long serialVersionUID = 1L;

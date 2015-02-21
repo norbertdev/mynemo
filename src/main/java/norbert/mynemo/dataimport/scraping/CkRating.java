@@ -17,6 +17,7 @@
 package norbert.mynemo.dataimport.scraping;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -31,19 +32,20 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 
 /**
- * This class represents a rating from the CK web site.
+ * A rating from the CK web site encapsulates the user that gives the rating, the rated movie and
+ * the value of the rating. The rated movie is defined by its CK id.
  *
  * <p>
  * A list of ratings can be persisted in a tab-separated value file, where each line represents a
  * rating. The columns are:
  * <ul>
- * <li>user id from CK</li>
- * <li>movie id from CK</li>
- * <li>value of the rating</li>
+ * <li>user id from CK
+ * <li>movie id from CK
+ * <li>value of the rating
  * </ul>
- * </p>
  */
 public class CkRating {
+
   private static final String MOVIE_HEADER = "ck_movie";
   private static final String USER_HEADER = "ck_user";
   private static final String VALUE_HEADER = "rating_value";
@@ -91,9 +93,7 @@ public class CkRating {
   }
 
   private final String movie;
-
   private final String user;
-
   private final String value;
 
   public CkRating(String user, String movie, String value) {
@@ -119,6 +119,8 @@ public class CkRating {
    * {@link #createPrinter(String)} method.
    */
   public void printOn(CSVPrinter printer) throws IOException {
+    checkNotNull(printer);
+
     // the write order depends on the order of the headers in the csv format
     printer.print(user);
     printer.print(movie);

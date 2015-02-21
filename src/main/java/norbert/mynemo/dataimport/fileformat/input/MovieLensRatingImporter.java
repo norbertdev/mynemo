@@ -17,6 +17,7 @@
 package norbert.mynemo.dataimport.fileformat.input;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -34,8 +35,8 @@ import org.apache.mahout.cf.taste.common.TasteException;
 import com.google.common.collect.UnmodifiableIterator;
 
 /**
- * This class represents a TSV file exported from the MovieLens web site. It contains the ratings of
- * only one user.
+ * This importer can parse a TSV file exported from the MovieLens web site. Such file contains the
+ * ratings of only one user.
  *
  * <p>
  * Each line of the source file represents a rating. The columns are:
@@ -46,9 +47,8 @@ import com.google.common.collect.UnmodifiableIterator;
  * <li>IMDb id</li>
  * <li>title and year</i>
  * </ol>
- * </p>
  */
-public class MovieLensRatingFile implements ImportableRatingFile {
+public class MovieLensRatingImporter implements RatingImporter {
   /**
    * Iterator over a MovieLens rating file that converts the CSV records to Mynemo ratings.
    */
@@ -126,9 +126,9 @@ public class MovieLensRatingFile implements ImportableRatingFile {
   private final CSVParser parser;
   private final String user;
 
-  public MovieLensRatingFile(String filepath, String user) throws IOException {
-    checkArgument(filepath != null, "The rating filepath must be not null.");
-    checkArgument(user != null, "The user must be not null.");
+  public MovieLensRatingImporter(String filepath, String user) throws IOException {
+    checkNotNull(filepath);
+    checkNotNull(user);
     checkArgument(new File(filepath).exists(), "The file must exist.");
 
     this.user = user;

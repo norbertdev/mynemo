@@ -30,10 +30,11 @@ import org.apache.commons.csv.CSVRecord;
 import com.google.common.collect.UnmodifiableIterator;
 
 /**
- * This class represents a file containing ratings. The format of this file is defined in the
- * {@link MynemoRating} class.
+ * This importer can load a file containing Mynamo ratings. The format of this file is defined by
+ * the {@link MynemoRating} class.
  */
-public class MynemoRatingFile implements ImportableRatingFile {
+public class MynemoRatingImporter implements RatingImporter {
+
   private final class RatingIterator extends UnmodifiableIterator<MynemoRating> {
     private Iterator<CSVRecord> iterator = parser.iterator();
 
@@ -78,7 +79,7 @@ public class MynemoRatingFile implements ImportableRatingFile {
 
   private final CSVParser parser;
 
-  public MynemoRatingFile(String filepath) throws IOException {
+  public MynemoRatingImporter(String filepath) throws IOException {
     checkArgument(filepath != null, "The rating filepath must be not null.");
     checkArgument(new File(filepath).exists(), "The file must exist.");
 

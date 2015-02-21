@@ -24,17 +24,19 @@ import org.jsoup.nodes.Element;
 import org.jsoup.parser.Parser;
 
 /**
- * This class represent a movie with a title and a year. The data are retrieve from an remote
+ * This class represents a movie with a title and a year. The data is retrieved from a remote
  * service. Thus some delay may appear the first time a getter is called.
  */
 public class Movie {
+
   private static final String IMDB_URL_PREFIX = "http://www.imdb.com/title/";
   private static final String IMDB_URL_SUFFIX = "/";
-  private static final int REQUEST_TIMEOUT = 10 * 1000;
   private static final String OMDB_URL_PREFIX = "http://www.omdbapi.com/?i=";
   private static final String OMDB_URL_SUFFIX = "&r=xml";
+  private static final int REQUEST_TIMEOUT = 10 * 1000;
   private static final String USER_AGENT =
       "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:22.0) Gecko/20100101 Firefox/22.0";
+
   private boolean dataIsReady;
   private String imdbId;
   private String title;
@@ -63,15 +65,15 @@ public class Movie {
     return OMDB_URL_PREFIX + completeId + OMDB_URL_SUFFIX;
   }
 
+  public String getImdbUrl() {
+    return IMDB_URL_PREFIX + imdbId + IMDB_URL_SUFFIX;
+  }
+
   public String getTitle() throws IOException {
     if (!dataIsReady) {
       fetchData();
     }
     return title;
-  }
-
-  public String getImdbUrl() {
-    return IMDB_URL_PREFIX + imdbId + IMDB_URL_SUFFIX;
   }
 
   public String getYear() throws IOException {

@@ -16,10 +16,15 @@
  */
 package norbert.mynemo.core.selection;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import norbert.mynemo.core.evaluation.PersonnalRecommenderEvaluator;
+import norbert.mynemo.core.recommendation.RecommenderFamily;
 import norbert.mynemo.core.recommendation.RecommenderType;
 import norbert.mynemo.core.recommendation.configuration.UserBasedRecommenderConfiguration;
 import norbert.mynemo.core.recommendation.recommender.UserSimilarityRecommender;
@@ -39,19 +44,17 @@ import org.apache.mahout.cf.taste.model.DataModel;
  * <p>
  * A minimum coverage is taken in account. Indeed, an evaluation with a coverage below the given
  * minimum coverage produces the value {code Double.MAX_VALUE}.
- * </p>
  *
  * <p>
  * Because this class implements the {@link UnivariateFunction}, it can be used by a
  * {@link org.apache.commons.math3.optim.univariate.UnivariateOptimizer UnivariateOptimizer}.
- * </p>
  */
 class UserBasedRecommenderEvaluationFunction implements UnivariateFunction {
 
   private final DataModel dataModel;
   private final DataModelBuilder dataModelBuilder;
   private final double evaluationPercentage;
-  private final Collection<RecommenderEvaluation> evaluations;
+  private final List<RecommenderEvaluation> evaluations;
   private final PersonnalRecommenderEvaluator evaluator;
   private final double minimumCoverage;
   private final boolean reuseIsAllowed;
@@ -63,6 +66,10 @@ class UserBasedRecommenderEvaluationFunction implements UnivariateFunction {
    */
   public UserBasedRecommenderEvaluationFunction(SelectorConfiguration configuration,
       RecommenderType type, double minimumCoverage) {
+    checkNotNull(configuration);
+    checkArgument(type.getFamily() == RecommenderFamily.USER_SIMILARITY_BASED);
+    checkArgument(0 <= minimumCoverage && minimumCoverage <= 1, "The minimum coverage must be"
+        + "between 0 and 1.");
 
     this.type = type;
     this.minimumCoverage = minimumCoverage;

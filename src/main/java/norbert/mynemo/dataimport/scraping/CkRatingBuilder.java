@@ -22,23 +22,25 @@ import static com.google.common.base.Preconditions.checkState;
  * This builder ensures that the three required values are provided.
  */
 public class CkRatingBuilder {
-  private boolean alreadyCreated;
+
+  private boolean hasAlreadyBeenCreated;
   public final String movie;
   public final String value;
 
   public CkRatingBuilder(String movie, String value) {
     this.movie = movie;
     this.value = value;
-    alreadyCreated = false;
+    hasAlreadyBeenCreated = false;
   }
 
   /**
-   * Sets the user of the rating and create the rating. Throws an exception if the rating has
-   * already been created.
+   * Sets the user of the rating and creates the rating.
+   *
+   * @throws IllegalStateException if the rating has already been created
    */
   public CkRating createRating(String user) {
-    checkState(!alreadyCreated);
-    alreadyCreated = true;
+    checkState(!hasAlreadyBeenCreated);
+    hasAlreadyBeenCreated = true;
     return new CkRating(user, movie, value);
   }
 }

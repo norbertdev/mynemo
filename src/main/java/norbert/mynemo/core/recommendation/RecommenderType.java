@@ -24,6 +24,10 @@ import java.util.List;
 
 import com.google.common.collect.Lists;
 
+/**
+ * A type of recommender defines an algorithm used for recommending items. Each type belong to a
+ * {@link RecommenderFamily family}.
+ */
 public enum RecommenderType {
   // basic
   ITEM_AVERAGE(RecommenderFamily.BASIC),
@@ -58,7 +62,7 @@ public enum RecommenderType {
       RecommenderFamily.USER_SIMILARITY_BASED);
 
   /**
-   * Returns available algorithm that are classified in the given family.
+   * Returns available algorithms that are classified in the given family.
    */
   public static List<RecommenderType> getByFamily(RecommenderFamily family) {
     checkArgument(family != null, "The family must not be null.");

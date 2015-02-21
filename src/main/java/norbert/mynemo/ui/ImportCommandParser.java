@@ -40,6 +40,7 @@ import com.google.common.base.Optional;
  * imported rating are written into an output file. The ratings can be filtered.
  */
 public class ImportCommandParser {
+
   private static final String COMMAND_SYNTAX = "import  --out <file>  --in <file> [<file>…]"
       + "  [--movies <file> [<file>]]  [--user <id>]  [--max-users <number> [--similarity <type>]]"
       + "  [--min-ratings-by-movie <number>]";

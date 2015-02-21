@@ -25,6 +25,7 @@ import norbert.mynemo.core.recommendation.recommender.BasicRecommender;
  * This class represents a configuration for the {@link BasicRecommender}
  */
 public class BasicRecommenderConfiguration implements RecommenderConfiguration {
+
   private final RecommenderType type;
 
   public BasicRecommenderConfiguration(RecommenderType type) {

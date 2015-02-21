@@ -33,7 +33,8 @@ import org.apache.commons.csv.CSVRecord;
  * This class provides a conversion from the MovieLens ids of movies to the IMDb ids. This
  * information is extracted from a file that can be exported from the MovieLens web site.
  */
-public class IdConverter {
+class MovieLensIdConverter {
+
   private static final int IMDB_MOVIE_ID_INDEX = 3;
   private static final int MOVIELENS_MOVIE_ID_INDEX = 0;
   private static final int RECORD_SIZE = 5;
@@ -43,10 +44,10 @@ public class IdConverter {
   private final Map<String, String> mappings;
 
   /**
-   * Loads the movie file.
+   * Loads the mapping file.
    *
    * <p>
-   * The columns of the movie file are:
+   * The columns of the mapping file are:
    * <ol>
    * <li>MovieLens id of the movie</li>
    * <li>rating</li>
@@ -54,24 +55,23 @@ public class IdConverter {
    * <li>IMDb id of the movie</li>
    * <li>title and year</li>
    * </ol>
-   * </p>
    *
-   * @param movieFilepath the file that contains the movies
+   * @param mappingFilepath the file that contains the mapping
    */
-  public IdConverter(String movieFilepath) throws IOException {
-    checkArgument(new File(movieFilepath).exists(), "The movie file must exist.");
+  public MovieLensIdConverter(String mappingFilepath) throws IOException {
+    checkArgument(new File(mappingFilepath).exists(), "The mapping file must exist.");
 
     CSVParser parser =
-        new CSVParser(new CleanRatingsReader(new BufferedReader(new FileReader(movieFilepath))),
+        new CSVParser(new CleanRatingsReader(new BufferedReader(new FileReader(mappingFilepath))),
             CSVFormat.MYSQL);
 
     mappings = new HashMap<>();
     for (CSVRecord record : parser) {
       if (record.size() != RECORD_SIZE) {
         parser.close();
-        throw new IllegalStateException("Error: unable to parse the movie file \"" + movieFilepath
-            + "\". A list of five tab separated values is expected. Approximate line number: "
-            + record.getRecordNumber());
+        throw new IllegalStateException("Error: unable to parse the movie file \""
+            + mappingFilepath + "\". A list of five tab separated values is expected. Approximate"
+            + " line number: " + record.getRecordNumber());
       }
       mappings.put(record.get(MOVIELENS_MOVIE_ID_INDEX), record.get(IMDB_MOVIE_ID_INDEX));
     }
@@ -84,7 +84,6 @@ public class IdConverter {
    * otherwise.
    *
    * @param movielensId an id of a movie from MovieLens
-   * @return <code>true</code> if a correspondence exists, <code>false</code> otherwise
    */
   public boolean canConvert(String movielensId) {
     return mappings.containsKey(movielensId);
@@ -93,12 +92,9 @@ public class IdConverter {
   /**
    * Returns the corresponding IMDb id of the given MovieLens id of a movie.
    *
-   * <p>
-   * Throws an exception if the given MovieLens id has no corresponding IMDb id.
-   * </p>
-   *
    * @param movielensId an id of a movie from MovieLens
    * @return the corresponding IMDb id
+   * @throws IllegalArgumentException if {@code movielensId} has no corresponding IMDb id.
    */
   public String convert(String movielensId) {
     checkArgument(mappings.containsKey(movielensId), "The MovieLens id of a movie must have a"

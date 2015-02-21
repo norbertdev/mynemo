@@ -36,7 +36,8 @@ import org.apache.mahout.cf.taste.recommender.Recommender;
 
 /**
  * This class represents several recommender builders. The recommenders are based on the SVD method.
- * A builder is chosen via the constructors.
+ * A builder is chosen via the {@link #SvdBasedRecommender(SvdBasedRecommenderConfiguration)
+ * constructor}.
  */
 public class SvdBasedRecommender implements RecommenderBuilder {
 

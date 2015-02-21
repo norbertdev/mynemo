@@ -28,8 +28,8 @@ public class EvaluationReport {
 
   private final long duration;
   private final DescriptiveStatistics predictionErrors;
-  private final DescriptiveStatistics squaredPredictionErrors;
   private final long predictionRequestNumber;
+  private final DescriptiveStatistics squaredPredictionErrors;
 
   public EvaluationReport(DescriptiveStatistics predictionErrors,
       DescriptiveStatistics squaredPredictionErrors, long predictionRequestNumber, long duration) {
@@ -47,7 +47,6 @@ public class EvaluationReport {
    * <p>
    * This evaluator only works with the already rated items by the target user. Thus, the coverage
    * do not cover the entire item set, but only the items already rated by the user.
-   * </p>
    */
   public double getCoverage() {
     return predictionErrors.getN() / (double) predictionRequestNumber;
@@ -61,31 +60,6 @@ public class EvaluationReport {
   }
 
   /**
-   * Returns a copy of all the values: either the list of errors for the MAE metric, or the list of
-   * squared errors for the RMSE metric.
-   */
-  public DescriptiveStatistics getValues(MetricType metric) {
-    checkNotNull(metric);
-
-    DescriptiveStatistics result;
-
-    switch (metric) {
-      case MEAN_ABSOLUTE_ERROR:
-        result = new DescriptiveStatistics(predictionErrors);
-        break;
-
-      case ROOT_MEAN_SQUARED_ERROR:
-        result = new DescriptiveStatistics(squaredPredictionErrors);
-        break;
-
-      default:
-        throw new UnsupportedOperationException();
-    }
-
-    return result;
-  }
-
-  /**
    * Returns the mean absolute error of the evaluation. The returned value can be NaN.
    */
   public double getMae() {
@@ -94,7 +68,7 @@ public class EvaluationReport {
 
   /**
    * Returns the standard deviation of the mean absolute error of the evaluation. The returned value
-   * can be NaN.
+   * can be <code>NaN</code>.
    */
   public double getMaeStandardDeviation() {
     return predictionErrors.getStandardDeviation();
@@ -122,6 +96,31 @@ public class EvaluationReport {
 
       case ROOT_MEAN_SQUARED_ERROR:
         result = getRmse();
+        break;
+
+      default:
+        throw new UnsupportedOperationException();
+    }
+
+    return result;
+  }
+
+  /**
+   * Returns a copy of all the values: either the list of errors for the MAE metric, or the list of
+   * squared errors for the RMSE metric.
+   */
+  public DescriptiveStatistics getValues(MetricType metric) {
+    checkNotNull(metric);
+
+    DescriptiveStatistics result;
+
+    switch (metric) {
+      case MEAN_ABSOLUTE_ERROR:
+        result = new DescriptiveStatistics(predictionErrors);
+        break;
+
+      case ROOT_MEAN_SQUARED_ERROR:
+        result = new DescriptiveStatistics(squaredPredictionErrors);
         break;
 
       default:

@@ -36,7 +36,7 @@ import org.apache.mahout.cf.taste.common.TasteException;
 /**
  * This selector performs evaluations on a user-similarity based recommender for a user.
  */
-class BestUserRecommenderSelector {
+class UserRecommenderSelector {
   private static final double ABS_FOR_STOPPING_CRITERION = 0.01;
   private static final int MAX_EVALUATIONS = 1024;
   /**
@@ -49,7 +49,7 @@ class BestUserRecommenderSelector {
   private final SelectorConfiguration configuration;
   private final int maxNeighbors;
 
-  public BestUserRecommenderSelector(SelectorConfiguration configuration) throws TasteException {
+  public UserRecommenderSelector(SelectorConfiguration configuration) throws TasteException {
     this.configuration = configuration;
     maxNeighbors =
         (int) (configuration.getDataModel().getNumUsers() * configuration.getEvaluationPercentage() * configuration
@@ -64,12 +64,13 @@ class BestUserRecommenderSelector {
    *
    * <p>
    * The given recommender type must be part of the user similarity based family.
-   * </p>
    *
    * @return all evaluations done during the selection process
    */
   public Collection<RecommenderEvaluation> select(RecommenderType type, double minimumCoverage) {
     checkArgument(type.getFamily() == RecommenderFamily.USER_SIMILARITY_BASED);
+    checkArgument(0 <= minimumCoverage && minimumCoverage <= 1, "The minimum coverage must be"
+        + "between 0 and 1.");
 
     // initialize necessary optimization data
     ConvergenceChecker<UnivariatePointValuePair> checker =

@@ -17,7 +17,6 @@
 package norbert.mynemo.dataimport.scraping.input;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,7 +34,9 @@ import com.google.common.collect.UnmodifiableIterator;
  * format of this file is defined in the {@link CkMapping} class.
  */
 public class CkMappingFile implements Iterable<CkMapping> {
+
   private final class MappingIterator extends UnmodifiableIterator<CkMapping> {
+
     private Iterator<CSVRecord> iterator = parser.iterator();
 
     @Override
@@ -83,7 +84,6 @@ public class CkMappingFile implements Iterable<CkMapping> {
   private final CSVParser parser;
 
   public CkMappingFile(String filepath) throws IOException {
-    checkNotNull(filepath);
     checkArgument(new File(filepath).exists(), "The file must exist.");
 
     parser = CkMapping.createParser(filepath);

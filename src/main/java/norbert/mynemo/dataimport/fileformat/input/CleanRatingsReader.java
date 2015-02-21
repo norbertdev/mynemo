@@ -27,20 +27,21 @@ import java.io.Reader;
  * with the character '<code>&lt;</code>'. The first line must be "<code>&lt;text&gt;</code>".
  */
 public class CleanRatingsReader extends Reader {
-  private static final String EXPECTED_FIRST_LINE = "<text>";
-  boolean firstReading;
-  boolean lastReading;
-  private final BufferedReader reader;
 
-  public CleanRatingsReader(BufferedReader reader) {
-    this.reader = reader;
+  private static final String EXPECTED_FIRST_LINE = "<text>";
+  private boolean firstReading;
+  private boolean lastReading;
+  private final BufferedReader previousReader;
+
+  public CleanRatingsReader(BufferedReader previousReader) {
+    this.previousReader = previousReader;
     firstReading = true;
     lastReading = false;
   }
 
   @Override
   public void close() throws IOException {
-    reader.close();
+    previousReader.close();
   }
 
   @Override
@@ -51,14 +52,14 @@ public class CleanRatingsReader extends Reader {
     }
     if (firstReading) {
       // discard the first two lines
-      String firstLine = reader.readLine();
+      String firstLine = previousReader.readLine();
       checkState(firstLine.equals(EXPECTED_FIRST_LINE), "Error: the first line of the file must be"
           + " \"" + EXPECTED_FIRST_LINE + "\".");
-      reader.readLine();
+      previousReader.readLine();
       firstReading = false;
     }
 
-    int readingLength = reader.read(buffer, offset, length);
+    int readingLength = previousReader.read(buffer, offset, length);
 
     // check if the last line that begins with '<' is reached
     int index = 0;
@@ -73,21 +74,5 @@ public class CleanRatingsReader extends Reader {
     }
 
     return index;
-  }
-
-  public String readLine() throws IOException {
-    if (firstReading) {
-      // discard the first two lines
-      reader.readLine();
-      reader.readLine();
-      firstReading = false;
-    }
-
-    String line = reader.readLine();
-    if (line.charAt(0) == '<') {
-      return null;
-    }
-
-    return line;
   }
 }

@@ -63,7 +63,6 @@ public class PersonnalRecommenderEvaluator implements RecommenderEvaluator {
    * @param dataModel source of the preferences
    * @param preferences destination of the preferences
    * @param user user id
-   * @throws TasteException
    */
   private static void copyUserPreferences(DataModel dataModel,
       FastByIDMap<PreferenceArray> preferences, long user) throws TasteException {
@@ -108,10 +107,10 @@ public class PersonnalRecommenderEvaluator implements RecommenderEvaluator {
   private final DescriptiveStatistics errorStats;
   private final boolean exhaustive;
   private final MetricType metric;
-  /** Accumulated error * error. */
-  private final DescriptiveStatistics squaredErrorStats;
   private long predictionRequestNumber;
   private final Random random;
+  /** Accumulated error * error. */
+  private final DescriptiveStatistics squaredErrorStats;
 
   private final long targetUser;
 
@@ -121,7 +120,6 @@ public class PersonnalRecommenderEvaluator implements RecommenderEvaluator {
    * <p>
    * An exhaustive evaluation is based on all preferences. An exhaustive evaluation results in a
    * lower speed and a better accuracy.
-   * </p>
    *
    * @param targetUser the user to evaluate.
    * @param metric type of metric to return
@@ -168,7 +166,6 @@ public class PersonnalRecommenderEvaluator implements RecommenderEvaluator {
    *
    * <p>
    * The given percentage must be between 0 and 1.
-   * </p>
    */
   private FastByIDMap<PreferenceArray> buildBaseTrainingPreferences(DataModel model,
       double evaluationPercentage) throws TasteException {
@@ -209,7 +206,6 @@ public class PersonnalRecommenderEvaluator implements RecommenderEvaluator {
    * <p>
    * If the evaluation is not exhaustive or if the given percentage is less than 0.5, then only one
    * set is build, that contains the given percentage of preference.
-   * </p>
    */
   private List<List<Preference>> buildTestSets(DataModel dataModel, double trainingPercentage)
       throws TasteException {
@@ -251,7 +247,6 @@ public class PersonnalRecommenderEvaluator implements RecommenderEvaluator {
    *
    * <p>
    * The resulting errors are added to {@link #errorStats} and {@link #squaredErrorStats}.
-   * </p>
    */
   private void evaluate(DataModel trainingModel, Recommender recommender,
       List<Preference> preferencesToEvaluate) throws TasteException {
@@ -288,7 +283,7 @@ public class PersonnalRecommenderEvaluator implements RecommenderEvaluator {
   @Override
   public double evaluate(RecommenderBuilder recommenderBuilder, DataModelBuilder dataModelBuilder,
       DataModel dataModel, double trainingPercentage, double evaluationPercentage)
-          throws TasteException {
+      throws TasteException {
 
     Timer timer = Timer.createStartedTimer();
 
@@ -312,11 +307,11 @@ public class PersonnalRecommenderEvaluator implements RecommenderEvaluator {
 
       DataModel currentTrainingModel =
           (dataModelBuilder == null) ? new GenericDataModel(currentTrainingPreferences)
-      : dataModelBuilder.buildDataModel(currentTrainingPreferences);
+              : dataModelBuilder.buildDataModel(currentTrainingPreferences);
 
-          Recommender currentRecommender = recommenderBuilder.buildRecommender(currentTrainingModel);
+      Recommender currentRecommender = recommenderBuilder.buildRecommender(currentTrainingModel);
 
-          evaluate(currentTrainingModel, currentRecommender, currentTestSet);
+      evaluate(currentTrainingModel, currentRecommender, currentTestSet);
     }
 
     duration = timer.stop().getDuration();
@@ -354,8 +349,6 @@ public class PersonnalRecommenderEvaluator implements RecommenderEvaluator {
 
   /**
    * Returns the MAE or the RMSE, depending of the choosen metric.
-   *
-   * @return the mean of errors
    */
   private double getEvaluationSummary(MetricType metric) {
     double summary;

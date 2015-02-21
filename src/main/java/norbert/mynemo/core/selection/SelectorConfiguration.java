@@ -17,7 +17,7 @@
 package norbert.mynemo.core.selection;
 
 import norbert.mynemo.core.evaluation.PersonnalRecommenderEvaluator;
-import norbert.mynemo.core.selection.BestRecommenderSelector.SpeedOption;
+import norbert.mynemo.core.selection.RecommenderSelector.SpeedOption;
 
 import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.eval.DataModelBuilder;
@@ -28,6 +28,7 @@ import org.apache.mahout.cf.taste.model.DataModel;
  * class are immutable.
  */
 class SelectorConfiguration {
+
   private final DataModel dataModel;
   private final DataModelBuilder dataModelBuilder;
   private final double evaluationPercentage;

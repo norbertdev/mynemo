@@ -34,24 +34,22 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.UnmodifiableIterator;
 
 /**
- * This class represents the file containing 10 millions of ratings from the MovieLens data set.
+ * This importer can parse the file containing 10 millions of ratings from the MovieLens data set.
  *
  * <p>
  * In the source file, each line represents a rating. The columns are:
  * <ol>
- * <li>user id</li>
- * <li>MovieLens id of a movie</li>
- * <li>rating</li>
- * <li>timestamp</li>
+ * <li>user id
+ * <li>MovieLens id of a movie
+ * <li>rating
+ * <li>timestamp
  * </ol>
- * </p>
  *
  * <p>
  * If a rating is on a movie with a MovieLens id that do not have a corresponding IMDb id, then this
  * rating is ignored.
- * </p>
  */
-public class TenMillionRatingFile implements ImportableRatingFile {
+public class TenMillionRatingImporter implements RatingImporter {
   /**
    * This iterator converts each given line from the 10 million rating file into a Mynemo rating.
    */
@@ -91,7 +89,7 @@ public class TenMillionRatingFile implements ImportableRatingFile {
       // retrieve data from the current line
       String movielensId = values[MOVIE_INDEX];
       String imdbId = idConverter.convert(movielensId);
-      String user = values[USER_INDEX];
+      String user = USER_PREFIX + values[USER_INDEX];
       String value = values[VALUE_INDEX];
 
       // create the rating
@@ -121,15 +119,16 @@ public class TenMillionRatingFile implements ImportableRatingFile {
     }
   }
 
+  /** Prefix to add to each user id. */
+  private static final String USER_PREFIX = "ml";
   private static final String KNOWN_LINE1_OF_10M_FILE = "1::122::5::838985046";
   private static final String KNOWN_LINE1_OF_MAPPING_FILE = "<text>";
-  private static final String KNOWN_LINE2_OF_MAPPING_FILE = "MovieId Rating  Average ImdbId  Title";
+  private static final String KNOWN_LINE2_OF_MAPPING_FILE =
+      "MovieId\tRating\tAverage\tImdbId\tTitle";
   private static final int MOVIE_INDEX = 1;
   private static final String MOVIELENS_VALUE_SEPARATOR = "::";
   private static final Pattern PATTERN = Pattern.compile(MOVIELENS_VALUE_SEPARATOR);
-
   private static final int USER_INDEX = 0;
-
   private static final int VALUE_INDEX = 2;
 
   /**
@@ -138,7 +137,7 @@ public class TenMillionRatingFile implements ImportableRatingFile {
    *
    * @param filepath file containing the 10 million ratings
    * @param mappingFilepath file containing the mappings between movie ids
-   * @return true if the ratings can be imported, false otherwise
+   * @return <code>true</code> if the ratings can be imported, <code>false</code> otherwise
    */
   public static boolean canImport(String filepath, String mappingFilepath) {
     try (BufferedReader tenmReader = new BufferedReader(new FileReader(filepath));
@@ -151,15 +150,14 @@ public class TenMillionRatingFile implements ImportableRatingFile {
     }
   }
 
-  private final IdConverter idConverter;
-
+  private final MovieLensIdConverter idConverter;
   private final LineIterator lineIterator;
 
-  public TenMillionRatingFile(String ratingFilepath, String mappingFilepath) throws IOException {
+  public TenMillionRatingImporter(String ratingFilepath, String mappingFilepath) throws IOException {
     checkNotNull(ratingFilepath);
     checkNotNull(mappingFilepath);
 
-    idConverter = new IdConverter(mappingFilepath);
+    idConverter = new MovieLensIdConverter(mappingFilepath);
     lineIterator = new LineIterator(new BufferedReader(new FileReader(ratingFilepath)));
   }
 

@@ -34,7 +34,9 @@ import com.google.common.collect.UnmodifiableIterator;
  * defined in the {@link CkRating} class.
  */
 public class CkRatingFile implements Iterable<CkRating> {
+
   private final class RatingIterator extends UnmodifiableIterator<CkRating> {
+
     private Iterator<CSVRecord> iterator = parser.iterator();
 
     @Override

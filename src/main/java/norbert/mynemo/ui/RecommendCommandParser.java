@@ -50,6 +50,7 @@ import com.google.common.base.Optional;
  * This parser handles a command line to recommend items to an user.
  */
 public class RecommendCommandParser {
+
   // algorithm
   private static final String ALGORITHM_ARG_NAME = "algo";
   private static final char ALGORITHM_CHAR_OPTION = 'a';
@@ -260,7 +261,7 @@ public class RecommendCommandParser {
       RecommendCommandParser.printUsage();
     } catch (Exception e) {
       System.err.println(e.getMessage());
-      RecommendCommandParser.printUsage();
+      e.printStackTrace();
     }
   }
 
@@ -436,7 +437,7 @@ public class RecommendCommandParser {
     long result;
 
     try {
-      result = StringUserDataModel.userNameToLong(user);
+      result = StringUserDataModel.convertUsername(user);
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Error: the provided user is not a valid id.", e);
     }

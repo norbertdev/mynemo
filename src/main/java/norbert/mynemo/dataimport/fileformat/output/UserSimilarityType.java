@@ -16,6 +16,10 @@
  */
 package norbert.mynemo.dataimport.fileformat.output;
 
+/**
+ * Types of similarity that can be used for computing the neighbors of a user by the
+ * {@link MaxNeighborUserFilter}.
+ */
 public enum UserSimilarityType {
   CITY_BLOCK_DISTANCE, EUCLIDEAN_DISTANCE, LOG_LIKELIHOOD, PEARSON_CORRELATION, SPEARMAN_CORRELATION, TANIMOTO_COEFFICIENT, UNCENTERED_COSINE, WEIGHTED_EUCLIDEAN_DISTANCE, WEIGHTED_PEARSON_CORRELATION, WEIGHTED_UNCENTERED_COSINE
 }

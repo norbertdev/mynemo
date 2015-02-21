@@ -24,6 +24,7 @@ import norbert.mynemo.core.recommendation.configuration.RecommenderConfiguration
  * This class represents an evaluation of a recommender.
  */
 public class RecommenderEvaluation {
+
   private final RecommenderConfiguration configuration;
   private final EvaluationReport evaluationReport;
 
