@@ -62,6 +62,14 @@ class CkIdConverter {
   }
 
   /**
+   * Removes all known mappings. The converter won't be able to convert any id after this call
+   * returns.
+   */
+  public void clear() {
+    mappings.clear();
+  }
+
+  /**
    * Returns the corresponding IMDb id of the given CK id of a movie.
    *
    * @param ckId an id of a movie from CK

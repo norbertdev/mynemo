@@ -61,9 +61,10 @@ public class TenMillionRatingImporter implements RatingImporter {
     }
 
     /**
-     * Closes the line iterator, that closes the file.
+     * Closes the line iterator, that closes the file. Clears the converter.
      */
     private void close() {
+      idConverter.clear();
       lineIterator.close();
     }
 

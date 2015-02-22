@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 
@@ -117,7 +116,7 @@ public class MaxNeighborUserFilter implements RatingWriter {
     return HASH_FUNCTION.newHasher().putString(string, Charsets.UTF_8).hash().asLong();
   }
 
-  private final List<MynemoRating> allRatings;
+  private final ArrayList<MynemoRating> allRatings;
   private final Set<String> allUsers;
   private final int maxUsers;
   private final RatingWriter nextWriter;
@@ -152,6 +151,10 @@ public class MaxNeighborUserFilter implements RatingWriter {
     } catch (TasteException e) {
       throw new RuntimeException(e);
     };
+
+    allRatings.clear();
+    allRatings.trimToSize();
+    allUsers.clear();
 
     nextWriter.close();
   }

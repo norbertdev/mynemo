@@ -47,9 +47,22 @@ public class CkRatingImporter implements RatingImporter {
       delegate = delegateIterator;
     }
 
+    /**
+     * Clears the converter.
+     */
+    private void close() {
+      idConverter.clear();
+    }
+
     @Override
     public boolean hasNext() {
-      return delegate.hasNext();
+      boolean result = delegate.hasNext();
+
+      if (!result) {
+        close();
+      }
+
+      return result;
     }
 
     @Override

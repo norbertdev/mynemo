@@ -90,6 +90,14 @@ class MovieLensIdConverter {
   }
 
   /**
+   * Removes all known mappings. The converter won't be able to convert any id after this call
+   * returns.
+   */
+  public void clear() {
+    mappings.clear();
+  }
+
+  /**
    * Returns the corresponding IMDb id of the given MovieLens id of a movie.
    *
    * @param movielensId an id of a movie from MovieLens

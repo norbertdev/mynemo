@@ -51,6 +51,7 @@ public class MaxUserFilter implements RatingWriter {
 
   @Override
   public void close() throws IOException {
+    writableUsers.clear();
     nextWriter.close();
   }
 

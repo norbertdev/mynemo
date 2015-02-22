@@ -75,6 +75,7 @@ public class ScaleValueWriter implements RatingWriter {
   @Override
   public void close() throws IOException {
     writeAllRatings();
+    allRatings.clear();
     nextWriter.close();
   }
 
