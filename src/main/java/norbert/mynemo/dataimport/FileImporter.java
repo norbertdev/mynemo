@@ -29,6 +29,7 @@ import norbert.mynemo.dataimport.fileformat.input.MovieLensRatingImporter;
 import norbert.mynemo.dataimport.fileformat.input.MynemoRatingImporter;
 import norbert.mynemo.dataimport.fileformat.input.RatingImporter;
 import norbert.mynemo.dataimport.fileformat.input.TenMillionRatingImporter;
+import norbert.mynemo.dataimport.fileformat.output.DuplicateRemover;
 import norbert.mynemo.dataimport.fileformat.output.MaxNeighborUserFilter;
 import norbert.mynemo.dataimport.fileformat.output.MaxUserFilter;
 import norbert.mynemo.dataimport.fileformat.output.MinRatingByMovieFilter;
@@ -127,6 +128,7 @@ public class FileImporter {
       }
     }
     nextWriter = new ScaleValueWriter(nextWriter);
+    nextWriter = new DuplicateRemover(nextWriter);
 
     return nextWriter;
   }

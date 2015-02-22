@@ -29,6 +29,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 /**
  * A Mynemo rating encapsulates the user that give the rating, the rated movie and the value of the
@@ -121,6 +122,15 @@ public class MynemoRating {
     this.value = value;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (!(o instanceof MynemoRating)) {
+      return false;
+    }
+    MynemoRating r = (MynemoRating) o;
+    return movie.equals(r.movie) && user.equals(r.user) && value.equals(r.value);
+  }
+
   public String getMovie() {
     return movie;
   }
@@ -131,6 +141,11 @@ public class MynemoRating {
 
   public String getValue() {
     return value;
+  }
+
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder().append(movie).append(user).append(value).toHashCode();
   }
 
   /**
