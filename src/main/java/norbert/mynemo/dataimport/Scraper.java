@@ -17,9 +17,14 @@
 package norbert.mynemo.dataimport;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -43,14 +48,20 @@ import com.google.common.base.Optional;
  */
 public class Scraper {
 
+  private final CkScraper ckScraper;
   private final List<CkMapping> loadedMappings;
   private final List<CkRating> loadedRatings;
   private final Set<String> loadedUsers;
+  private final Set<String> movieBlacklist;
+  private final String movieBlacklistFilepath;
   private final String outputMappingFilepath;
   private final String outputRatingFilepath;
+  private final Set<String> userBlacklist;
+  private final String userBlacklistFilepath;
 
-  public Scraper(String outputMappingFilepath, String outputRatingFilepath, String[] inputFilepaths)
-      throws IOException {
+  public Scraper(String outputMappingFilepath, String outputRatingFilepath,
+      String[] inputFilepaths, List<String> userAgents, String movieBlacklistFilepath,
+      String userBlacklistFilepath) throws IOException {
     // check
     checkArgument(!new File(outputMappingFilepath).exists(), "The given output file for movies"
         + " must not exist.");
@@ -59,24 +70,58 @@ public class Scraper {
     for (String filepath : inputFilepaths) {
       checkArgument(new File(filepath).exists(), "The given input file of user must exist.");
     }
+    checkArgument(!userAgents.isEmpty(), "At least one user agent must be given.");
+    checkNotNull(movieBlacklistFilepath);
+    checkNotNull(userBlacklistFilepath);
 
     // initialize
     this.outputMappingFilepath = outputMappingFilepath;
     this.outputRatingFilepath = outputRatingFilepath;
+    this.movieBlacklistFilepath = movieBlacklistFilepath;
+    this.userBlacklistFilepath = userBlacklistFilepath;
+
+    ckScraper = new CkScraper(userAgents);
 
     loadedUsers = new HashSet<>();
     loadedMappings = new ArrayList<>();
     loadedRatings = new ArrayList<>();
+    movieBlacklist = new HashSet<>();
+    userBlacklist = new HashSet<>();
 
     // load the input files
     for (String filepath : inputFilepaths) {
       loadFile(filepath);
     }
+
+    // load the blacklists
+    loadMovieBlacklist(movieBlacklistFilepath);
+    loadUserBlacklist(userBlacklistFilepath);
+  }
+
+  /**
+   * Adds the given movie to the blacklist.
+   */
+  private void blacklistMovie(String movie) throws IOException {
+    // append to the end if the file already exists
+    try (PrintWriter writer = new PrintWriter(new FileWriter(movieBlacklistFilepath, true))) {
+      writer.println(movie);
+    }
+  }
+
+  /**
+   * Adds the given user to the blacklist.
+   */
+  private void blacklistUser(String user) throws IOException {
+    // append to the end if the file already exists
+    try (PrintWriter writer = new PrintWriter(new FileWriter(userBlacklistFilepath, true))) {
+      writer.println(user);
+    }
   }
 
   /**
    * Returns the movies in the {@link #loadedRatings} field that does not have a mapping in the
-   * {@link #loadedMappings} field.
+   * {@link #loadedMappings} field. The returned collection does not contain the movies in the
+   * {@link #movieBlacklist}.
    */
   private Collection<String> getMovieWithouMapping() {
     Set<String> moviesWithMapping = new HashSet<>();
@@ -92,7 +137,7 @@ public class Scraper {
     // test the movie of each rating
     for (CkRating rating : loadedRatings) {
       String movie = rating.getMovie();
-      if (!moviesWithMapping.contains(movie)) {
+      if (!moviesWithMapping.contains(movie) && !movieBlacklist.contains(movie)) {
         result.add(movie);
       }
     }
@@ -102,7 +147,7 @@ public class Scraper {
 
   /**
    * Returns the users in the {@link #loadedUsers} field that does not have any rating in the
-   * {@link #loadedRatings} field.
+   * {@link #loadedRatings} field. The blacklisted user are not returned.
    */
   private Set<String> getUserWithoutRating() {
     Set<String> usersWithRatings = new HashSet<>();
@@ -116,7 +161,7 @@ public class Scraper {
 
     // test each user
     for (String user : loadedUsers) {
-      if (!usersWithRatings.contains(user)) {
+      if (!usersWithRatings.contains(user) && !userBlacklist.contains(user)) {
         result.add(user);
       }
     }
@@ -171,6 +216,30 @@ public class Scraper {
   }
 
   /**
+   * Loads all CK movie ids from the given file into the {@link #movieBlacklist} field.
+   */
+  private void loadMovieBlacklist(String blacklistFilepath) throws IOException {
+    try (BufferedReader reader = new BufferedReader(new FileReader(blacklistFilepath))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        movieBlacklist.add(line);
+      }
+    }
+  }
+
+  /**
+   * Loads all CK user ids from the given file into the {@link #userBlacklist} field.
+   */
+  private void loadUserBlacklist(String blacklistFilepath) throws IOException {
+    try (BufferedReader reader = new BufferedReader(new FileReader(blacklistFilepath))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        userBlacklist.add(line);
+      }
+    }
+  }
+
+  /**
    * Scrapes the user ratings and the movie mappings from the CK web site.
    */
   public void scrape() throws IOException, InterruptedException {
@@ -181,7 +250,6 @@ public class Scraper {
     loadedRatings.clear();
     loadFile(outputRatingFilepath);
 
-    // scrape the movies without imdb id
     scrapeMappings();
   }
 
@@ -193,10 +261,12 @@ public class Scraper {
       movieMappingWriter.writeAll(loadedMappings);
       movieMappingWriter.flush();
       for (String movie : getMovieWithouMapping()) {
-        Optional<CkMapping> mapping = CkScraper.scrapeMovieMapping(movie);
+        Optional<CkMapping> mapping = ckScraper.scrapeMovieMapping(movie);
         if (mapping.isPresent()) {
           movieMappingWriter.write(mapping.get());
           movieMappingWriter.flush();
+        } else {
+          blacklistMovie(movie);
         }
       }
     }
@@ -210,8 +280,14 @@ public class Scraper {
       ratingWriter.writeAll(loadedRatings);
       ratingWriter.flush();
       for (String user : getUserWithoutRating()) {
-        ratingWriter.writeAll(CkScraper.scrapeRatingsOfUser(user));
-        ratingWriter.flush();
+        List<CkRating> ratings = ckScraper.scrapeRatingsOfUser(user);
+        if (ratings.isEmpty()) {
+          // blacklist the user with no rating
+          blacklistUser(user);
+        } else {
+          ratingWriter.writeAll(ratings);
+          ratingWriter.flush();
+        }
       }
     }
   }

@@ -16,9 +16,13 @@
  */
 package norbert.mynemo.ui;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import norbert.mynemo.dataimport.Scraper;
 
@@ -37,7 +41,8 @@ import org.apache.mahout.cf.taste.common.TasteException;
 public class ScrapeCommandParser {
 
   private static final String COMMAND_SYNTAX = "scrape  --out-ratings <file>  --out-movies <file>"
-      + "  --in <file> [<file>…]";
+      + "  --in <file> [<file>…] --user-agents <file> --movie-blacklist <file>"
+      + "  --user-blacklist <file>";
 
   // input files
   private static final String IN_ARG_NAME = "files";
@@ -49,6 +54,12 @@ public class ScrapeCommandParser {
       + " from this command: they are merged with the new scraped data. At last one file must be"
       + " provided.";
   private static final String IN_LONG_OPTION = "in";
+
+  // movie blacklist file
+  private static final String MOVIE_BLACKLIST_ARG_NAME = "file";
+  private static final String MOVIE_BLACKLIST_DESCRIPTION = "a file containing a listing the movie"
+      + " ids to ignore. Each line contains an id.";
+  private static final String MOVIE_BLACKLIST_LONG_OPTION = "movie-blacklist";
 
   // output file for scraped movies
   private static final String OUT_MOVIES_ARG_NAME = "file";
@@ -64,11 +75,24 @@ public class ScrapeCommandParser {
       + " written.";
   private static final String OUT_RATINGS_LONG_OPTION = "out-ratings";
 
+  // user blacklist file
+  private static final String USER_BLACKLIST_ARG_NAME = "file";
+  private static final String USER_BLACKLIST_DESCRIPTION = "a file containing a listing the user"
+      + " ids to ignore. Each line contains an id.";
+  private static final String USER_BLACKLIST_LONG_OPTION = "user-blacklist";
+  // output file for scraped ratings
+  private static final String USERAGENTS_ARG_NAME = "file";
+
+  private static final char USERAGENTS_CHAR_OPTION = 'u';
+  private static final String USERAGENTS_DESCRIPTION = "input file where the user agents are"
+      + " listed. Each line must contain one user agent.";
+  private static final String USERAGENTS_LONG_OPTION = "user-agents";
+
   /**
    * Performs various checks on the parameters.
    */
   private static void check(String outMoviesFilepath, String outRatingsFilepath,
-      String[] inputFilepaths) throws FileNotFoundException {
+      String[] inputFilepaths, String blacklistFilepath) throws FileNotFoundException {
 
     // check output filepaths
     if (new File(outMoviesFilepath).exists()) {
@@ -86,14 +110,22 @@ public class ScrapeCommandParser {
         throw new FileNotFoundException("Error: cannot find the intput file " + filepath + ".");
       }
     }
+
+    // check blacklist
+    if (!new File(blacklistFilepath).exists()) {
+      throw new IllegalArgumentException("Error: the blacklist file " + blacklistFilepath
+          + " doesn't exist.");
+    }
   }
 
   /**
    * Runs the scraper.
    */
   private static void execute(String outMoviesFilepath, String outRatingsFilepath,
-      String[] inputFilepaths) throws IOException, InterruptedException {
-    new Scraper(outMoviesFilepath, outRatingsFilepath, inputFilepaths).scrape();
+      String[] inputFilepaths, List<String> userAgents, String movieBlacklistFilepath,
+      String userBlacklistFilepath) throws IOException, InterruptedException {
+    new Scraper(outMoviesFilepath, outRatingsFilepath, inputFilepaths, userAgents,
+        movieBlacklistFilepath, userBlacklistFilepath).scrape();
   }
 
   private static Options getOptions() {
@@ -121,7 +153,32 @@ public class ScrapeCommandParser {
     OptionBuilder.withDescription(IN_DESCRIPTION);
     Option in = OptionBuilder.create(IN_CHAR_OPTION);
 
-    return new Options().addOption(outMovies).addOption(outRatings).addOption(in);
+    // user agent file
+    OptionBuilder.isRequired();
+    OptionBuilder.hasArg();
+    OptionBuilder.withArgName(USERAGENTS_ARG_NAME);
+    OptionBuilder.withLongOpt(USERAGENTS_LONG_OPTION);
+    OptionBuilder.withDescription(USERAGENTS_DESCRIPTION);
+    Option userAgents = OptionBuilder.create(USERAGENTS_CHAR_OPTION);
+
+    // movie blacklist file
+    OptionBuilder.isRequired();
+    OptionBuilder.hasArg();
+    OptionBuilder.withArgName(MOVIE_BLACKLIST_ARG_NAME);
+    OptionBuilder.withLongOpt(MOVIE_BLACKLIST_LONG_OPTION);
+    OptionBuilder.withDescription(MOVIE_BLACKLIST_DESCRIPTION);
+    Option movieBlacklist = OptionBuilder.create();
+
+    // user blacklist file
+    OptionBuilder.isRequired();
+    OptionBuilder.hasArg();
+    OptionBuilder.withArgName(USER_BLACKLIST_ARG_NAME);
+    OptionBuilder.withLongOpt(USER_BLACKLIST_LONG_OPTION);
+    OptionBuilder.withDescription(USER_BLACKLIST_DESCRIPTION);
+    Option userBlacklist = OptionBuilder.create();
+
+    return new Options().addOption(outMovies).addOption(outRatings).addOption(in)
+        .addOption(userAgents).addOption(movieBlacklist).addOption(userBlacklist);
   }
 
   public static void main(String[] args) {
@@ -148,12 +205,39 @@ public class ScrapeCommandParser {
     String outMoviesFilepath = commandLine.getOptionValue(OUT_MOVIES_LONG_OPTION);
     String outRatingsFilepath = commandLine.getOptionValue(OUT_RATINGS_LONG_OPTION);
     String[] inputFilepaths = commandLine.getOptionValues(IN_LONG_OPTION);
+    List<String> userAgents = parseUserAgents(commandLine.getOptionValue(USERAGENTS_LONG_OPTION));
+    String movieBlacklistFilepath = commandLine.getOptionValue(MOVIE_BLACKLIST_LONG_OPTION);
+    String userBlacklistFilepath = commandLine.getOptionValue(USER_BLACKLIST_LONG_OPTION);
 
     // check
-    check(outMoviesFilepath, outRatingsFilepath, inputFilepaths);
+    check(outMoviesFilepath, outRatingsFilepath, inputFilepaths, movieBlacklistFilepath);
 
     // run
-    execute(outMoviesFilepath, outRatingsFilepath, inputFilepaths);
+    execute(outMoviesFilepath, outRatingsFilepath, inputFilepaths, userAgents,
+        movieBlacklistFilepath, userBlacklistFilepath);
+  }
+
+  /**
+   * Parses and checks the "user-agents" option.
+   */
+  private static List<String> parseUserAgents(String optionValue) throws IOException {
+
+    List<String> result = new ArrayList<>();
+
+    try (BufferedReader reader = new BufferedReader(new FileReader(optionValue))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        result.add(line);
+      }
+    }
+
+    // check the parsed value
+    if (result.isEmpty()) {
+      throw new IllegalArgumentException("Error: at last one user agent must be provided in the"
+          + " file.");
+    }
+
+    return result;
   }
 
   public static void printUsage() {
