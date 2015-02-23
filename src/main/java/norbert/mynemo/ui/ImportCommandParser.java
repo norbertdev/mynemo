@@ -43,7 +43,7 @@ public class ImportCommandParser {
 
   private static final String COMMAND_SYNTAX = "import  --out <file>  --in <file> [<file>…]"
       + "  [--movies <file> [<file>]]  [--user <id>]  [--max-users <number> [--similarity <type>]]"
-      + "  [--min-ratings-by-movie <number>]";
+      + "  [--min-ratings-by-movie <number>]  [min-common-ratings <number>]";
 
   // maximum number of users
   private static final String MAX_USERS_ARG_NAME = "number";
@@ -52,6 +52,14 @@ public class ImportCommandParser {
       + " option can be further refined with the 'similarity' and the 'user' options, to retain"
       + " the nearest neighbors of the specified user.";
   private static final String MAX_USERS_LONG_OPTION = "max-users";
+
+  // minimum number of common ratings
+  private static final String MIN_COMMON_RATINGS_ARG_NAME = "number";
+  private static final String MIN_COMMON_RATINGS_DESCRIPTION = "minimum number of ratings in"
+      + " common with the given user. The ouput file will only contain ratings of users that have"
+      + " at least this number of common ratings with the given user. Two ratings are common"
+      + " between two users if there movies are equal.";
+  private static final String MIN_COMMON_RATINGS_LONG_OPTION = "min-common-ratings";
 
   // minimum number of ratings for a movie
   private static final String MIN_RATINGS_BY_MOVIE_ARG_NAME = "number";
@@ -102,8 +110,9 @@ public class ImportCommandParser {
    * Performs various checks on the parameters.
    */
   private static void check(String ouputFilepath, String[] ratingFilepaths,
-      String[] mappingFilepaths, Optional<Integer> maxUsers, Optional<String> user,
-      Optional<UserSimilarityType> similarityType) throws FileNotFoundException {
+      String[] mappingFilepaths, Optional<Integer> maxUsers, Optional<Integer> minCommonRatings,
+      Optional<String> user, Optional<UserSimilarityType> similarityType)
+      throws FileNotFoundException {
 
     // output filepath
     if (new File(ouputFilepath).exists()) {
@@ -122,6 +131,12 @@ public class ImportCommandParser {
       if (!new File(filepath).exists()) {
         throw new FileNotFoundException("Error: cannot find the movie file " + filepath);
       }
+    }
+
+    // minimum number of common ratings
+    if (minCommonRatings.isPresent() && (!user.isPresent())) {
+      throw new IllegalArgumentException("Error: if a minimum common rating is given, then the"
+          + " user must be given.");
     }
 
     // similarity type
@@ -171,13 +186,20 @@ public class ImportCommandParser {
     Option minRatingsByMovie = OptionBuilder.create();
 
     OptionBuilder.hasArg();
+    OptionBuilder.withArgName(MIN_COMMON_RATINGS_ARG_NAME);
+    OptionBuilder.withLongOpt(MIN_COMMON_RATINGS_LONG_OPTION);
+    OptionBuilder.withDescription(MIN_COMMON_RATINGS_DESCRIPTION);
+    Option minCommonRatings = OptionBuilder.create();
+
+    OptionBuilder.hasArg();
     OptionBuilder.withArgName(SIMILARITY_ARG_NAME);
     OptionBuilder.withLongOpt(SIMILARITY_LONG_OPTION);
     OptionBuilder.withDescription(SIMILARITY_DESCRIPTION);
     Option similarity = OptionBuilder.create(SIMILARITY_CHAR_OPTION);
 
     return new Options().addOption(out).addOption(ratings).addOption(movies).addOption(user)
-        .addOption(maxUsers).addOption(minRatingsByMovie).addOption(similarity);
+        .addOption(maxUsers).addOption(minRatingsByMovie).addOption(minCommonRatings)
+        .addOption(similarity);
   }
 
   public static void main(String[] args) {
@@ -212,13 +234,17 @@ public class ImportCommandParser {
     Optional<Integer> maxUsers = parseMaxUser(commandLine.getOptionValue(MAX_USERS_LONG_OPTION));
     Optional<Integer> minRatingsByMovie =
         parseMinRatingsByMovie(commandLine.getOptionValue(MIN_RATINGS_BY_MOVIE_LONG_OPTION));
+    Optional<Integer> minCommonRatings =
+        parseMinCommonRatings(commandLine.getOptionValue(MIN_COMMON_RATINGS_LONG_OPTION));
     Optional<UserSimilarityType> similarityType =
         parseSimilarityType(commandLine.getOptionValue(SIMILARITY_LONG_OPTION));
 
-    check(outputFilepath, ratingsFilepaths, moviesFilepath, maxUsers, user, similarityType);
+    check(outputFilepath, ratingsFilepaths, moviesFilepath, maxUsers, minCommonRatings, user,
+        similarityType);
 
     FileImporter.convert(outputFilepath, Arrays.asList(ratingsFilepaths),
-        Arrays.asList(moviesFilepath), user, maxUsers, minRatingsByMovie, similarityType);
+        Arrays.asList(moviesFilepath), user, maxUsers, minRatingsByMovie, minCommonRatings,
+        similarityType);
   }
 
   /**
@@ -242,6 +268,33 @@ public class ImportCommandParser {
     if (result <= 0) {
       throw new IllegalArgumentException("Error: the maximum number of users must be greater than"
           + " 0.");
+    }
+
+    return Optional.of(result);
+  }
+
+  /**
+   * Parses and checks the "min-common-ratings" option.
+   */
+  private static Optional<Integer> parseMinCommonRatings(String optionValue) {
+    if (optionValue == null) {
+      return Optional.absent();
+    }
+
+    Integer result;
+
+    // parse
+    try {
+      result = Integer.parseInt(optionValue);
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException("Error: the minimum ratings in common is not a valid"
+          + " integer.", e);
+    }
+
+    // check
+    if (result <= 0) {
+      throw new IllegalArgumentException("Error: the minimum number of common ratings must be"
+          + " greater than 0.");
     }
 
     return Optional.of(result);

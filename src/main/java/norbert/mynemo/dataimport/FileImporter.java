@@ -32,6 +32,7 @@ import norbert.mynemo.dataimport.fileformat.input.TenMillionRatingImporter;
 import norbert.mynemo.dataimport.fileformat.output.DuplicateRemover;
 import norbert.mynemo.dataimport.fileformat.output.MaxNeighborUserFilter;
 import norbert.mynemo.dataimport.fileformat.output.MaxUserFilter;
+import norbert.mynemo.dataimport.fileformat.output.MinCommonRatingFilter;
 import norbert.mynemo.dataimport.fileformat.output.MinRatingByMovieFilter;
 import norbert.mynemo.dataimport.fileformat.output.RatingFileWriter;
 import norbert.mynemo.dataimport.fileformat.output.RatingWriter;
@@ -80,8 +81,8 @@ public class FileImporter {
    */
   public static void convert(String outputFilepath, Collection<String> inputFilepaths,
       Collection<String> movieFilepath, Optional<String> user, Optional<Integer> maxUsers,
-      Optional<Integer> minRatingsByMovie, Optional<UserSimilarityType> similarityType)
-      throws IOException {
+      Optional<Integer> minRatingsByMovie, Optional<Integer> minCommonRatings,
+      Optional<UserSimilarityType> similarityType) throws IOException {
     checkNotNull(outputFilepath);
     checkNotNull(inputFilepaths);
     checkArgument(!inputFilepaths.isEmpty(), "At least one input file must be given.");
@@ -95,7 +96,7 @@ public class FileImporter {
 
     RatingWriter writer =
         createFilters(new RatingFileWriter(outputFilepath), maxUsers, minRatingsByMovie,
-            similarityType, user);
+            similarityType, minCommonRatings, user);
 
     for (String ratingFilepath : inputFilepaths) {
       RatingImporter importableFile = getFile(ratingFilepath, movieFilepath, user);
@@ -112,7 +113,7 @@ public class FileImporter {
    */
   private static RatingWriter createFilters(RatingWriter lastWriter, Optional<Integer> maxUsers,
       Optional<Integer> minRatingsByMovie, Optional<UserSimilarityType> similarityType,
-      Optional<String> targetUser) {
+      Optional<Integer> minCommonRatings, Optional<String> targetUser) {
 
     RatingWriter nextWriter = lastWriter;
 
@@ -127,6 +128,10 @@ public class FileImporter {
       } else {
         nextWriter = new MaxUserFilter(nextWriter, maxUsers.get());
       }
+    }
+    if (minCommonRatings.isPresent()) {
+      checkArgument(targetUser.isPresent(), "The user parameter is missing.");
+      nextWriter = new MinCommonRatingFilter(nextWriter, targetUser.get(), minCommonRatings.get());
     }
     nextWriter = new ScaleValueWriter(nextWriter);
     nextWriter = new DuplicateRemover(nextWriter);
