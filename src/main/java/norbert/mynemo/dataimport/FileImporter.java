@@ -36,6 +36,7 @@ import norbert.mynemo.dataimport.fileformat.output.MinRatingByMovieFilter;
 import norbert.mynemo.dataimport.fileformat.output.RatingFileWriter;
 import norbert.mynemo.dataimport.fileformat.output.RatingWriter;
 import norbert.mynemo.dataimport.fileformat.output.ScaleValueWriter;
+import norbert.mynemo.dataimport.fileformat.output.UnivalueRemover;
 import norbert.mynemo.dataimport.fileformat.output.UserSimilarityType;
 
 import com.google.common.base.Optional;
@@ -129,6 +130,7 @@ public class FileImporter {
     }
     nextWriter = new ScaleValueWriter(nextWriter);
     nextWriter = new DuplicateRemover(nextWriter);
+    nextWriter = new UnivalueRemover(nextWriter);
 
     return nextWriter;
   }
